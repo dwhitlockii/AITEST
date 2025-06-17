@@ -8,4 +8,6 @@ uvicorn>=0.24.0
 python-dotenv>=1.0.0
 aiofiles>=23.0.0
 schedule>=1.2.0
-colorama>=0.4.6 
+colorama>=0.4.6
+aiosqlite
+aiohttp>=3.8.0 
