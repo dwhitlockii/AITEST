@@ -81,8 +81,8 @@ class OllamaConfig:
     """Ollama local LLM configuration - for API key-free LLM communication."""
 
     url: str = "http://localhost:11434"
-    model: str = "mistral"
-    timeout: int = 30
+    model: str = "mistral:latest"
+    timeout: int = 60  # Increased from 30 to 60 seconds for better reliability
     retry_attempts: int = 3
     retry_delay: int = 2
     enabled: bool = True
@@ -115,85 +115,64 @@ class Config:
         self.agents = {
             "sensor": AgentConfig(
                 name="SensorAgent",
-                description="Collects system metrics and performance data",
-                check_interval=5.0,
+                description="Collects system metrics",
+                check_interval=10.0,
                 enabled=True,
-                max_concurrent_actions=1,
-                escalation_threshold=3
             ),
             "analyzer": AgentConfig(
-                name="AnalyzerAgent", 
-                description="Analyzes metrics and detects issues using AI",
-                check_interval=15.0,
+                name="AnalyzerAgent",
+                description="Analyzes metrics using LLM",
+                check_interval=60.0,
                 enabled=True,
-                max_concurrent_actions=2,
-                escalation_threshold=2
             ),
             "remediator": AgentConfig(
                 name="RemediatorAgent",
-                description="Performs automated remediation actions",
-                check_interval=30.0,
+                description="Performs remediation actions",
+                check_interval=60.0,
                 enabled=True,
-                max_concurrent_actions=1,
-                escalation_threshold=2
             ),
             "communicator": AgentConfig(
                 name="CommunicatorAgent",
-                description="Handles logging, notifications, and status updates",
-                check_interval=10.0,
+                description="Handles logging and communication",
+                check_interval=15.0,
                 enabled=True,
-                max_concurrent_actions=3,
-                escalation_threshold=5
             ),
-            # New agent configurations
             "security": AgentConfig(
                 name="SecurityAgent",
-                description="Monitors security events and enforces security policies",
-                check_interval=60.0,
+                description="Monitors security events",
+                check_interval=45.0,
                 enabled=True,
-                max_concurrent_actions=2,
-                escalation_threshold=2
             ),
             "network": AgentConfig(
                 name="NetworkAgent",
-                description="Monitors network performance and connectivity",
-                check_interval=30.0,
+                description="Monitors network performance",
+                check_interval=45.0,
                 enabled=True,
-                max_concurrent_actions=2,
-                escalation_threshold=3
             ),
             "application": AgentConfig(
                 name="ApplicationAgent",
-                description="Monitors application performance and processes",
-                check_interval=45.0,
+                description="Monitors application performance",
+                check_interval=60.0,
                 enabled=True,
-                max_concurrent_actions=2,
-                escalation_threshold=3
-            ),
-            "predictive": AgentConfig(
-                name="PredictiveAgent",
-                description="Uses AI to predict potential issues and trends",
-                check_interval=300.0,  # 5 minutes
-                enabled=True,
-                max_concurrent_actions=1,
-                escalation_threshold=2
             ),
             "compliance": AgentConfig(
                 name="ComplianceAgent",
-                description="Monitors compliance with policies and regulations",
-                check_interval=600.0,  # 10 minutes
+                description="Monitors compliance and policy",
+                check_interval=90.0,
                 enabled=True,
-                max_concurrent_actions=1,
-                escalation_threshold=2
             ),
             "backup": AgentConfig(
                 name="BackupAgent",
-                description="Monitors backup systems and disaster recovery",
-                check_interval=1800.0,  # 30 minutes
+                description="Monitors backup and disaster recovery",
+                check_interval=120.0,
                 enabled=True,
-                max_concurrent_actions=1,
-                escalation_threshold=2
-            )
+            ),
+            "predictive": AgentConfig(
+                name="PredictiveAgent",
+                description="Performs predictive analysis",
+                check_interval=120.0,
+                enabled=True,
+            ),
         }
 
         # Force all LLM-using agents to use Ollama by default

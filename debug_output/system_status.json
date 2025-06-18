@@ -1,106 +1,55 @@
 {
-  "timestamp": "2025-06-17T16:10:44.712645",
+  "timestamp": "2025-06-17T22:38:01.709824",
   "system_overview": {
     "platform": "Windows",
-    "cpu_usage": 65.5,
-    "memory_usage": 84.7,
+    "cpu_usage": 18.8,
+    "memory_usage": 78.6,
     "disk_usage": {
-      "C:\\": 95.3876804633371
+      "C:\\": 94.11222350188537
     },
-    "uptime": 1750154875.391488,
+    "uptime": 1750208491.351486,
     "total_agents": 1,
     "running_agents": 1
   },
   "agent_status": {
     "CommunicatorAgent": {
       "status": "running",
-      "health": "healthy",
-      "last_update": "2025-06-17T16:10:44.712645",
-      "uptime": 428.658912,
-      "check_count": 26,
+      "health": "unknown",
+      "last_update": "2025-06-17T22:38:01.709824",
+      "uptime": 0.0,
+      "check_count": 0,
       "error_count": 0
     }
   },
-  "recent_events": [
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:07:08.947329",
-      "description": "Message from AnalyzerAgent: trend_analysis"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:07:22.945217",
-      "description": "Message from SensorAgent: metric_data"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:08:34.676608",
-      "description": "Message from network: network_update"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:28.726609",
-      "description": "Message from predictive: prediction_update"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:41.820583",
-      "description": "Message from AnalyzerAgent: trend_analysis"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:41.826827",
-      "description": "Message from security: security_update"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:41.839092",
-      "description": "Message from AnalyzerAgent: alert"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:41.843148",
-      "description": "Message from AnalyzerAgent: trend_analysis"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:09:54.683990",
-      "description": "Message from SensorAgent: metric_data"
-    },
-    {
-      "type": "message",
-      "timestamp": "2025-06-17T16:10:14.797363",
-      "description": "Message from application: application_update"
-    }
-  ],
+  "recent_events": [],
   "health_indicators": {
     "cpu_health": "healthy",
     "memory_health": "healthy",
-    "disk_health": "critical",
-    "overall_health": "critical"
+    "disk_health": "warning",
+    "overall_health": "warning"
   },
   "performance_metrics": {
-    "cpu_percent": 81.8,
-    "memory_percent": 84.7,
+    "cpu_percent": 12.5,
+    "memory_percent": 78.6,
     "disk_io": {
-      "read_count": 2967319,
-      "write_count": 4256352,
-      "read_bytes": 138661395968,
-      "write_bytes": 94853632000,
-      "read_time": 2259,
-      "write_time": 789
+      "read_count": 2520012,
+      "write_count": 915249,
+      "read_bytes": 121132083712,
+      "write_bytes": 54289387008,
+      "read_time": 3487,
+      "write_time": 781
     },
     "network_io": {
-      "bytes_sent": 880957009,
-      "bytes_recv": 12123619051,
-      "packets_sent": 4536615,
-      "packets_recv": 8593034,
+      "bytes_sent": 231701247,
+      "bytes_recv": 411447812,
+      "packets_sent": 215633,
+      "packets_recv": 449669,
       "errin": 0,
       "errout": 0,
       "dropin": 0,
       "dropout": 0
     },
-    "load_average": 1.22
+    "load_average": 0.0
   },
   "active_issues": [],
   "llm_quota_alert_active": false,

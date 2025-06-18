@@ -5,7 +5,10 @@ Think of it as the Sherlock Holmes of system monitoring.
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+import hashlib
+import asyncio
+import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
@@ -43,6 +46,16 @@ class AnalyzerAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("AnalyzerAgent initialized - ready to analyze system patterns")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _metrics_hash(self, metrics):
+        # Hash the latest metrics for caching
+        import json
+        return hashlib.sha256(json.dumps(metrics, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Analyze recent metrics and detect issues."""
@@ -111,12 +124,18 @@ class AnalyzerAgent(BaseAgent):
             return {"error": "No metrics to analyze"}
         latest_metrics = metrics[-1]
         context = self._build_analysis_context(metrics)
+        metrics_hash = self._metrics_hash(latest_metrics)
+        now = datetime.now()
+        # Check cache
+        cached = self.analysis_cache.get(metrics_hash)
+        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=self.cache_ttl):
+            return cached
         try:
             gpt_decision = await ollama_client.analyze_metrics(latest_metrics, context)
             if hasattr(gpt_decision, "decision") and hasattr(gpt_decision, "reasoning"):
                 self.log_gpt_decision(gpt_decision.decision, gpt_decision.reasoning)
                 analysis_result = {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now.isoformat(),
                     "gpt_analysis": gpt_decision,
                     "issues_detected": self._extract_issues_from_gpt(gpt_decision),
                     "system_health_score": self._calculate_health_score(latest_metrics),
@@ -128,6 +147,7 @@ class AnalyzerAgent(BaseAgent):
                     ),
                     "llm_provider": self.llm_provider,
                 }
+                self.analysis_cache[metrics_hash] = analysis_result
                 return analysis_result
             elif isinstance(gpt_decision, dict):
                 self.logger.warning(
@@ -138,7 +158,7 @@ class AnalyzerAgent(BaseAgent):
                     gpt_decision.get("reasoning", "?"),
                 )
                 analysis_result = {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now.isoformat(),
                     "gpt_analysis": gpt_decision,
                     "issues_detected": gpt_decision.get("issues_detected", []),
                     "system_health_score": self._calculate_health_score(latest_metrics),
@@ -150,11 +170,12 @@ class AnalyzerAgent(BaseAgent):
                     ),
                     "llm_provider": self.llm_provider,
                 }
+                self.analysis_cache[metrics_hash] = analysis_result
                 return analysis_result
             else:
                 self.logger.error(f"Ollama returned unexpected type: {type(gpt_decision)}")
                 return {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now.isoformat(),
                     "error": f"Ollama returned unexpected type: {type(gpt_decision)}",
                     "fallback_analysis": self._fallback_analysis(latest_metrics),
                     "llm_provider": self.llm_provider,
@@ -162,7 +183,7 @@ class AnalyzerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"LLM analysis failed: {e}")
             return {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": now.isoformat(),
                 "error": f"LLM analysis failed: {str(e)}",
                 "fallback_analysis": self._fallback_analysis(latest_metrics),
                 "llm_provider": self.llm_provider,

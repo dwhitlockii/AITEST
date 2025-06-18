@@ -7,6 +7,9 @@ Think of it as your cybersecurity specialist with a badge and a mission.
 import os
 import subprocess
 import json
+import hashlib
+import asyncio
+import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
@@ -49,6 +52,14 @@ class SecurityAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("SecurityAgent initialized - ready to protect the system")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _metrics_hash(self, metrics):
+        return hashlib.sha256(json.dumps(metrics, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform security monitoring and threat detection."""
@@ -437,30 +448,22 @@ class SecurityAgent(BaseAgent):
             return False
 
     async def _analyze_security_data(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze security data using Ollama."""
+        # Throttle/caching logic
+        if not hasattr(self, 'analysis_cache'):
+            self.analysis_cache = {}
+        cache_ttl = 300  # 5 min
+        now = datetime.now()
+        metrics_hash = self._metrics_hash(metrics)
+        cached = self.analysis_cache.get(metrics_hash)
+        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            return cached["result"]
         try:
-            # Use Ollama to analyze security metrics
-            analysis_result = await ollama_client.analyze_metrics(metrics, "Security analysis")
-            
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "security_score": self._calculate_security_score(metrics),
-                "threat_level": analysis_result.risk_level,
-                "recommendations": analysis_result.alternatives,
-                "confidence": analysis_result.confidence,
-                "analysis": analysis_result.decision
-            }
-
+            result = await ollama_client.analyze_metrics(metrics, "Security analysis")
+            self.analysis_cache[metrics_hash] = {"result": result, "timestamp": now.isoformat()}
+            return result
         except Exception as e:
-            self.logger.error(f"Failed to analyze security data: {e}")
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "security_score": self._calculate_security_score(metrics),
-                "threat_level": "unknown",
-                "recommendations": [],
-                "confidence": 0.0,
-                "analysis": "Analysis failed"
-            }
+            self.logger.error(f"LLM security analysis failed: {e}")
+            return {"error": str(e)}
 
     def _calculate_security_score(self, metrics: Dict[str, Any]) -> float:
         """Calculate overall security score (0-100)."""

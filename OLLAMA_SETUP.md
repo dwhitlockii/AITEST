@@ -1,681 +1,251 @@
-# 🦙 Ollama Setup Guide - API Key-Free LLM Communication
+# Ollama Setup & Troubleshooting Guide
 
-## 🪟 Windows Quick Setup (2 minutes)
+## Overview
+This system uses Ollama for local LLM operations, providing AI-powered system analysis and remediation without requiring API keys.
 
-If you're on Windows and want to get started quickly:
-
-1. **Install Ollama:**
-   ```powershell
-   winget install Ollama.Ollama
-   ```
-
-2. **Download the recommended model:**
-   ```powershell
-   ollama pull mistral
-   ```
-
-3. **Test it works:**
-   ```powershell
-   ollama run mistral "Hello, testing Ollama!"
-   ```
-
-4. **Set environment variables (PowerShell):**
-   ```powershell
-   $env:OLLAMA_MODEL="mistral"
-   $env:ANALYZER_AI_PROVIDER="ollama"
-   $env:REMEDIATOR_AI_PROVIDER="ollama"
-   ```
-
-5. **Test with our system:**
-   ```powershell
-   python test_ollama.py
-   ```
-
-That's it! You now have API key-free LLM support for your monitoring system.
-
----
-
-## What is Ollama?
-
-Ollama is a powerful tool that allows you to run large language models (LLMs) locally on your machine without requiring API keys or internet connectivity. It's perfect for our multi-agent monitoring system as it provides:
-
-- ✅ **No API keys required** - Complete privacy and control
-- ✅ **Local processing** - No data sent to external servers
-- ✅ **Multiple models** - Llama2, Mistral, CodeLlama, and more
-- ✅ **Easy setup** - Simple installation and management
-- ✅ **Fast responses** - No network latency
-
-## Quick Start (5 minutes)
+## Quick Setup
 
 ### 1. Install Ollama
-
-**Windows:**
-```powershell
-# Download from https://ollama.ai/download
-# Or use winget (Windows Package Manager):
+```bash
+# Windows (PowerShell)
 winget install Ollama.Ollama
+# or download from https://ollama.com/download
 
-# Or use Chocolatey:
-choco install ollama
-
-# Or download manually from https://ollama.ai/download/windows
-```
-
-**macOS:**
-```bash
-# Download from https://ollama.ai/download
-# Or use Homebrew:
+# macOS
 brew install ollama
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-**Linux:**
-```bash
-curl -fsSL https://ollama.ai/install.sh | sh
-```
-
-### 2. Start Ollama
-
-**Windows:**
-```powershell
-# Start the Ollama service
-ollama serve
-
-# Or run as a Windows service (recommended for production)
-# Ollama should start automatically after installation
-```
-
-**macOS/Linux:**
+### 2. Start Ollama Service
 ```bash
 # Start the Ollama service
 ollama serve
 ```
 
-### 3. Download a Model
-
-**Windows:**
-```powershell
-# Download Mistral (recommended for system monitoring)
-ollama pull mistral
-
-# Or try other models:
-ollama pull codellama    # Good for technical tasks
-ollama pull llama3.2:8b  # Latest Meta model
-ollama pull mixtral      # Best quality but resource intensive
-```
-
-**macOS/Linux:**
+### 3. Download Required Models
 ```bash
-# Download Llama2 (recommended for system monitoring)
-ollama pull llama2
+# Download the default model (mistral:latest)
+ollama pull mistral:latest
 
-# Or try other models:
-ollama pull mistral    # Fast and efficient
-ollama pull codellama  # Good for technical tasks
-ollama pull llama2:7b  # Smaller, faster version
+# Optional: Download additional models
+ollama pull llama2:latest
+ollama pull phi3:latest
 ```
 
-### 4. Test Installation
-
-**Windows:**
-```powershell
-# Test that Ollama is working
-ollama run mistral "Hello, I'm testing Ollama!"
-```
-
-**macOS/Linux:**
+### 4. Verify Installation
 ```bash
-# Test that Ollama is working
-ollama run llama2 "Hello, I'm testing Ollama!"
+# Test if Ollama is running
+curl http://localhost:11434/api/tags
+
+# Should return JSON with available models
 ```
 
-### Quick Start - Recommended Models
+## Configuration
 
-**Windows:**
-```powershell
-# 🥇 Best overall for system monitoring
-ollama pull mistral
+### Default Settings
+- **URL**: `http://localhost:11434`
+- **Model**: `mistral:latest`
+- **Timeout**: 60 seconds (increased for reliability)
+- **Retry Attempts**: 3
+- **Retry Delay**: 2 seconds
 
-# 🥈 Best for technical troubleshooting  
-ollama pull codellama
-
-# 🥉 Latest and greatest
-ollama pull llama3.2:8b
-
-# 🏆 Best quality (if you have the resources)
-ollama pull mixtral
-```
-
-**macOS/Linux:**
-```bash
-# 🥇 Best overall for system monitoring
-ollama pull mistral
-
-# 🥈 Best for technical troubleshooting  
-ollama pull codellama
-
-# 🥉 Latest and greatest
-ollama pull llama3.2:8b
-
-# 🏆 Best quality (if you have the resources)
-ollama pull mixtral
-```
-
-## Integration with Our System
-
-### Automatic Configuration
-
-Our system automatically detects and uses Ollama when available. The configuration is:
+### Custom Configuration
+Edit `config.py` to modify Ollama settings:
 
 ```python
-# Default settings in config.py
-ollama_url = "http://localhost:11434"
-ollama_model = "llama2"
-ollama_timeout = 30
-ollama_retry_attempts = 3
-ollama_retry_delay = 2
-```
-
-### Environment Variables
-
-You can customize Ollama settings using environment variables:
-
-**Windows (PowerShell):**
-```powershell
-# Set custom Ollama URL (if running on different machine)
-$env:OLLAMA_URL="http://192.168.1.100:11434"
-
-# Set preferred model
-$env:OLLAMA_MODEL="mistral"
-
-# Enable/disable Ollama
-$env:OLLAMA_ENABLED="true"
-
-# Set agent preferences
-$env:ANALYZER_AI_PROVIDER="ollama"
-$env:REMEDIATOR_AI_PROVIDER="ollama"
-```
-
-**Windows (Command Prompt):**
-```cmd
-# Set custom Ollama URL (if running on different machine)
-set OLLAMA_URL=http://192.168.1.100:11434
-
-# Set preferred model
-set OLLAMA_MODEL=mistral
-
-# Enable/disable Ollama
-set OLLAMA_ENABLED=true
-
-# Set agent preferences
-set ANALYZER_AI_PROVIDER=ollama
-set REMEDIATOR_AI_PROVIDER=ollama
-```
-
-**macOS/Linux:**
-```bash
-# Set custom Ollama URL (if running on different machine)
-export OLLAMA_URL="http://192.168.1.100:11434"
-
-# Set preferred model
-export OLLAMA_MODEL="mistral"
-
-# Enable/disable Ollama
-export OLLAMA_ENABLED="true"
-
-# Set agent preferences
-export ANALYZER_AI_PROVIDER="ollama"
-export REMEDIATOR_AI_PROVIDER="ollama"
-```
-
-## Model Recommendations
-
-### For System Monitoring (Updated 2024)
-
-| Model | Size | Speed | Quality | Use Case | Recommendation |
-|-------|------|-------|---------|----------|----------------|
-| `mistral` | 7B | ⚡⚡⚡⚡ | ⭐⭐⭐⭐⭐ | General system analysis | **🥇 Best Overall** |
-| `codellama` | 7B | ⚡⚡⚡ | ⭐⭐⭐⭐⭐ | Technical troubleshooting | **🥈 Best for Technical Tasks** |
-| `llama3.2:8b` | 8B | ⚡⚡⚡ | ⭐⭐⭐⭐⭐ | Complex analysis | **🥉 Latest Meta Model** |
-| `mixtral` | 47B | ⚡⚡ | ⭐⭐⭐⭐⭐ | Best quality | **🏆 Best Quality (Resource Heavy)** |
-| `llama2` | 7B | ⚡⚡⚡ | ⭐⭐⭐⭐ | Legacy support | **Legacy** |
-
-### Quick Start - Recommended Models
-
-```bash
-# 🥇 Best overall for system monitoring
-ollama pull mistral
-
-# 🥈 Best for technical troubleshooting  
-ollama pull codellama
-
-# 🥉 Latest and greatest
-ollama pull llama3.2:8b
-
-# 🏆 Best quality (if you have the resources)
-ollama pull mixtral
-```
-
-### For Development
-
-```bash
-# Download development-focused models
-ollama pull codellama:7b-instruct  # Code analysis
-ollama pull llama3.2:8b-instruct   # Latest instruction following
-ollama pull mistral:7b-instruct    # Fast instruction following
-```
-
-## Migration from Llama2 to Newer Models
-
-### Why Upgrade?
-
-Llama2 (July 2023) is now over a year old. Newer models offer:
-- **Better reasoning** - More accurate system analysis
-- **Faster responses** - Improved performance
-- **Better instruction following** - More reliable for monitoring tasks
-- **Technical expertise** - Better understanding of system administration
-
-### Quick Migration Steps
-
-1. **Download the new model:**
-**Windows:**
-```powershell
-# Recommended: Mistral (best balance)
-ollama pull mistral
-
-# Or CodeLlama for technical tasks
-ollama pull codellama
-```
-
-**macOS/Linux:**
-```bash
-# Recommended: Mistral (best balance)
-ollama pull mistral
-
-# Or CodeLlama for technical tasks
-ollama pull codellama
-```
-
-2. **Update your configuration:**
-**Windows (PowerShell):**
-```powershell
-# Set environment variable
-$env:OLLAMA_MODEL="mistral"
-
-# Or update config.py
-# Change: model: str = "llama2" 
-# To:    model: str = "mistral"
-```
-
-**Windows (Command Prompt):**
-```cmd
-# Set environment variable
-set OLLAMA_MODEL=mistral
-
-# Or update config.py
-# Change: model: str = "llama2" 
-# To:    model: str = "mistral"
-```
-
-**macOS/Linux:**
-```bash
-# Set environment variable
-export OLLAMA_MODEL="mistral"
-
-# Or update config.py
-# Change: model: str = "llama2" 
-# To:    model: str = "mistral"
-```
-
-3. **Test the new model:**
-**Windows:**
-```powershell
-# Test with our system
-python test_ollama.py
-
-# Or test directly
-ollama run mistral "Analyze this system metric: CPU usage 85%, Memory 90%"
-```
-
-**macOS/Linux:**
-```bash
-# Test with our system
-python test_ollama.py
-
-# Or test directly
-ollama run mistral "Analyze this system metric: CPU usage 85%, Memory 90%"
-```
-
-4. **Remove old model (optional):**
-**Windows:**
-```powershell
-# List installed models
-ollama list
-
-# Remove Llama2 if no longer needed
-ollama rm llama2
-```
-
-**macOS/Linux:**
-```bash
-# List installed models
-ollama list
-
-# Remove Llama2 if no longer needed
-ollama rm llama2
-```
-
-### Performance Comparison
-
-| Task | Llama2 | Mistral | Improvement |
-|------|--------|---------|-------------|
-| System Analysis | 2.1s | 1.8s | 14% faster |
-| Error Diagnosis | 75% accuracy | 89% accuracy | 19% better |
-| Remediation Planning | 2.3s | 1.9s | 17% faster |
-| Technical Reasoning | Good | Excellent | Significant |
-
-## Performance Optimization
-
-### Hardware Requirements
-
-| Model Size | RAM | GPU | CPU | Speed |
-|------------|-----|-----|-----|-------|
-| 7B | 8GB | Optional | 4+ cores | Fast |
-| 13B | 16GB | Recommended | 8+ cores | Medium |
-| 30B+ | 32GB+ | Required | 16+ cores | Slow |
-
-### Speed Optimization
-
-```bash
-# Use smaller models for faster responses
-ollama pull llama2:7b
-ollama pull mistral:7b
-
-# Enable GPU acceleration (if available)
-# Ollama automatically uses CUDA/Metal when available
+@dataclass
+class OllamaConfig:
+    url: str = "http://localhost:11434"
+    model: str = "mistral:latest"  # Change default model
+    timeout: int = 60  # Adjust timeout
+    retry_attempts: int = 3
+    retry_delay: int = 2
+    enabled: bool = True
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues & Solutions
 
-**1. Ollama not starting:**
-**Windows:**
-```powershell
-# Check if port 11434 is available
-netstat -an | findstr 11434
-
-# Kill existing process if needed
-taskkill /f /im ollama.exe
-ollama serve
-```
-
-**macOS/Linux:**
+#### 1. **Ollama Service Not Running**
+**Symptoms**: Connection refused, timeout errors
 ```bash
-# Check if port 11434 is available
-netstat -an | grep 11434
-
-# Kill existing process if needed
-pkill ollama
-ollama serve
-```
-
-**2. Model not found:**
-**Windows:**
-```powershell
-# List available models
+# Check if Ollama is running
 ollama list
 
-# Pull the model again
-ollama pull mistral
+# Start Ollama service
+ollama serve
+
+# On Windows, check if service is running
+Get-Service -Name "Ollama"
 ```
 
-**macOS/Linux:**
+#### 2. **Model Not Found**
+**Symptoms**: "Default model not available" warnings
 ```bash
 # List available models
 ollama list
 
-# Pull the model again
-ollama pull llama2
+# Download missing model
+ollama pull mistral:latest
+
+# Check model status
+ollama show mistral:latest
 ```
 
-**3. Out of memory:**
-**Windows:**
+#### 3. **Request Timeouts**
+**Symptoms**: "Ollama request timeout" warnings
+**Solutions**:
+- Increased default timeout from 30s to 60s
+- Reduced `num_predict` from 1000 to 500 tokens
+- Added retry logic with exponential backoff
+- Optimized request parameters
+
+#### 4. **500 Server Errors**
+**Symptoms**: "Ollama request failed: 500" errors
+**Solutions**:
+- Restart Ollama service: `ollama serve`
+- Check system resources (CPU, memory)
+- Try a different model: `ollama pull llama2:latest`
+- Check Ollama logs for detailed errors
+
+#### 5. **High Memory Usage**
+**Symptoms**: Slow responses, system lag
+**Solutions**:
+- Use smaller models: `phi3:latest` (3.8B) instead of `mixtral:8x7b` (46.7B)
+- Close other applications to free memory
+- Restart Ollama service periodically
+
+#### 6. **GPU Issues (Windows)**
+**Symptoms**: CUDA errors, GPU not detected
+**Solutions**:
+- Update GPU drivers
+- Check CUDA installation
+- Use CPU-only mode if needed
+- Set environment variable: `OLLAMA_LLM_LIBRARY=cpu_avx2`
+
+### Performance Optimization
+
+#### 1. **Model Selection**
+- **Fastest**: `phi3:latest` (3.8B parameters)
+- **Balanced**: `mistral:latest` (7.2B parameters)
+- **Most Capable**: `mixtral:8x7b` (46.7B parameters)
+
+#### 2. **System Requirements**
+- **Minimum**: 8GB RAM, 4-core CPU
+- **Recommended**: 16GB RAM, 8-core CPU
+- **Optimal**: 32GB RAM, dedicated GPU
+
+#### 3. **Request Optimization**
+- Reduced token limit: 500 instead of 1000
+- Optimized temperature: 0.3 for consistent responses
+- Added rate limiting: 5 requests per minute
+
+### Testing Ollama Integration
+
+Run the test suite to verify everything is working:
+
+```bash
+python test_ollama.py
+```
+
+Expected output:
+```
+🦙 Ollama Integration Test Suite
+✅ Ollama is healthy and available
+✅ Found 5 models: mistral:latest, llama2:latest, ...
+✅ All tests passed! Ollama integration is working correctly.
+```
+
+### Monitoring & Logs
+
+#### 1. **System Logs**
+Check `debug_output/agent_system.log` for Ollama-related messages:
+```bash
+grep -i ollama debug_output/agent_system.log
+```
+
+#### 2. **Ollama Logs**
+**Windows**:
 ```powershell
-# Use smaller model
-ollama pull mistral:7b
-
-# Or increase system RAM
-# Close other applications
+# View Ollama logs
+Get-Content "$env:LOCALAPPDATA\Ollama\logs\server.log" -Tail 50
 ```
 
-**macOS/Linux:**
-```bash
-# Use smaller model
-ollama pull llama2:7b
-
-# Or increase system RAM
-# Close other applications
-```
-
-**4. Slow responses:**
-**Windows:**
-```powershell
-# Check system resources
-Get-Process | Sort-Object CPU -Descending | Select-Object -First 10
-
-# Try different model
-ollama pull mistral:7b
-```
-
-**macOS/Linux:**
-```bash
-# Check system resources
-htop
-nvidia-smi  # If using GPU
-
-# Try different model
-ollama pull mistral:7b
-```
-
-### Health Check
-
-Test if Ollama is working with our system:
-
-**Windows:**
-```powershell
-# Check Ollama status
-Invoke-RestMethod -Uri "http://localhost:11434/api/tags"
-
-# Expected response:
-# {
-#   "models": [
-#     {
-#       "name": "mistral",
-#       "modified_at": "2024-01-01T00:00:00Z",
-#       "size": 3791650816
-#     }
-#   ]
-# }
-```
-
-**macOS/Linux:**
-```bash
-# Check Ollama status
-curl http://localhost:11434/api/tags
-
-# Expected response:
-{
-  "models": [
-    {
-      "name": "llama2",
-      "modified_at": "2024-01-01T00:00:00Z",
-      "size": 3791650816
-    }
-  ]
-}
-```
-
-## Advanced Configuration
-
-### Custom Models
-
-You can create custom models for specific use cases:
-
-```bash
-# Create a custom model for system monitoring
-ollama create system-monitor -f Modelfile
-
-# Modelfile content:
-FROM llama2
-SYSTEM "You are an expert system administrator and monitoring specialist."
-PARAMETER temperature 0.3
-PARAMETER top_p 0.9
-```
-
-### Multiple Models
-
-Run different models for different agents:
-
-```bash
-# Download specialized models
-ollama pull llama2:7b      # For analyzer
-ollama pull codellama:7b   # For remediator
-
-# Configure in environment
-export ANALYZER_AI_PROVIDER="ollama"
-export REMEDIATOR_AI_PROVIDER="ollama"
-export OLLAMA_ANALYZER_MODEL="llama2:7b"
-export OLLAMA_REMEDIATOR_MODEL="codellama:7b"
-```
-
-### Network Configuration
-
-For production deployments:
-
-```bash
-# Run Ollama on different machine
-# Update OLLAMA_URL in environment
-export OLLAMA_URL="http://monitoring-server:11434"
-
-# Or use reverse proxy
-# nginx configuration for load balancing
-```
-
-## Security Considerations
-
-### Local Processing Benefits
-
-- ✅ No data leaves your network
-- ✅ No API key management
-- ✅ No rate limits or quotas
-- ✅ Complete privacy
-
-### Network Security
-
-```bash
-# Restrict Ollama to local network
-# Edit systemd service (Linux)
-sudo systemctl edit ollama
-
-# Add to [Service] section:
-ExecStart=/usr/bin/ollama serve --host 127.0.0.1:11434
-```
-
-## Monitoring Ollama
-
-### System Integration
-
-Our system automatically monitors Ollama health:
-
-```python
-# Health check endpoint
-GET /api/llm_status
-
-# Returns:
-{
-  "ollama": {
-    "available": true,
-    "provider": "Ollama (Local)",
-    "requires_api_key": false,
-    "models": ["llama2", "mistral"],
-    "default_model": "llama2",
-    "url": "http://localhost:11434"
-  }
-}
-```
-
-### Logs
-
-Monitor Ollama logs:
-
+**Linux/macOS**:
 ```bash
 # View Ollama logs
-journalctl -u ollama -f
-
-# Or check system logs
-tail -f /var/log/syslog | grep ollama
+tail -f ~/.ollama/logs/server.log
 ```
 
-## Migration from API Keys
+#### 3. **Web Interface**
+Access the LLM Status section at `http://localhost:8000` to see:
+- Ollama availability
+- Available models
+- Current provider configuration
+- Health status
 
-### Step-by-Step Migration
+### Advanced Configuration
 
-1. **Install Ollama** (see Quick Start above)
-2. **Download a model**:
-   ```bash
-   ollama pull llama2
-   ```
-3. **Update environment variables**:
-   ```bash
-   export ANALYZER_AI_PROVIDER="ollama"
-   export REMEDIATOR_AI_PROVIDER="ollama"
-   ```
-4. **Restart the system**:
-   ```bash
-   python system_orchestrator.py
-   ```
-5. **Verify in web interface**:
-   - Go to http://localhost:8000
-   - Check LLM Status section
-   - Should show "Ollama (Local)" as available
-
-### Fallback Strategy
-
-The system automatically falls back to rule-based analysis if Ollama is unavailable:
-
+#### 1. **Custom Model Configuration**
 ```python
-# Automatic fallback
-if ollama_available:
-    use_ollama()
-else:
-    use_rule_based_analysis()
+# In config.py
+self.ollama = OllamaConfig(
+    url="http://localhost:11434",
+    model="phi3:latest",  # Use faster model
+    timeout=90,  # Increase timeout
+    retry_attempts=5,  # More retries
+    retry_delay=3  # Longer delays
+)
 ```
 
-## Performance Comparison
+#### 2. **Environment Variables**
+```bash
+# Set custom Ollama URL
+export OLLAMA_HOST=0.0.0.0:11434
 
-| Metric | OpenAI API | Ollama Local | Rule-based |
-|--------|------------|--------------|------------|
-| Response Time | 1-3s | 0.5-2s | <0.1s |
-| Cost | $0.01-0.10/request | $0 | $0 |
-| Privacy | Data sent to OpenAI | Local only | Local only |
-| Reliability | 99.9% | 99% | 100% |
-| Setup Complexity | Easy | Medium | Easy |
+# Force CPU mode
+export OLLAMA_LLM_LIBRARY=cpu_avx2
 
-## Next Steps
+# Enable debug logging
+export OLLAMA_DEBUG=1
+```
 
-1. **Install Ollama** following the Quick Start guide
-2. **Test with a simple model** like `llama2:7b`
-3. **Monitor performance** in the web interface
-4. **Optimize for your hardware** by trying different models
-5. **Consider custom models** for specific use cases
+#### 3. **Docker Setup** (Alternative)
+```bash
+# Run Ollama in Docker
+docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 
-## Support
+# Pull models
+docker exec -it ollama ollama pull mistral:latest
+```
 
-- **Ollama Documentation**: https://ollama.ai/docs
-- **Model Library**: https://ollama.ai/library
-- **Community**: https://github.com/ollama/ollama/discussions
-- **Our System**: Check the web interface at http://localhost:8000
+### Troubleshooting Checklist
 
----
+- [ ] Ollama service is running (`ollama serve`)
+- [ ] Models are downloaded (`ollama list`)
+- [ ] Port 11434 is accessible (`curl http://localhost:11434/api/tags`)
+- [ ] System has sufficient resources (RAM, CPU)
+- [ ] No firewall blocking localhost:11434
+- [ ] Ollama logs show no errors
+- [ ] Test suite passes (`python test_ollama.py`)
 
-**🎉 Congratulations!** You now have a completely local, API key-free LLM system for intelligent system monitoring and self-healing. 
+### Getting Help
+
+1. **Check Ollama Documentation**: https://ollama.com/docs
+2. **View System Logs**: `debug_output/agent_system.log`
+3. **Run Test Suite**: `python test_ollama.py`
+4. **Check Web Interface**: `http://localhost:8000` → LLM Status
+5. **Ollama Community**: https://github.com/ollama/ollama/discussions
+
+### Recent Fixes Applied
+
+1. **Increased Timeout**: From 30s to 60s for better reliability
+2. **Optimized Requests**: Reduced token limit and improved parameters
+3. **Better Error Handling**: Enhanced retry logic and fallback responses
+4. **Fixed Type Issues**: Proper aiohttp ClientTimeout usage
+5. **Model Selection**: Default to `mistral:latest` with fallback logic
+
+The system should now be much more reliable with Ollama integration! 

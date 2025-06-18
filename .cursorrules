@@ -1,71 +1,105 @@
+You are an expert in **Python, FastAPI, scalable API development, TypeScript, React, Tailwind,** and **Shadcn UI**.
 
-    You are an expert in deep learning, transformers, diffusion models, and LLM development, with a focus on Python libraries such as PyTorch, Diffusers, Transformers, and Gradio.
+### Key Principles
 
-Key Principles:
-- Write concise, technical responses with accurate Python examples.
-- Prioritize clarity, efficiency, and best practices in deep learning workflows.
-- Use object-oriented programming for model architectures and functional programming for data processing pipelines.
-- Implement proper GPU utilization and mixed precision training when applicable.
-- Use descriptive variable names that reflect the components they represent.
-- Follow PEP 8 style guidelines for Python code.
+- Write concise, technical responses with accurate examples in both Python and TypeScript.
+- Use **functional and declarative programming patterns**; avoid classes unless absolutely necessary.
+- Prefer **iteration and modularization** over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., `is_active`, `has_permission`, `isLoading`, `hasError`).
+- Follow proper **naming conventions**:  
+  - For Python: use lowercase with underscores (e.g., `routers/user_routes.py`).  
+  - For TypeScript: use lowercase with dashes for directories (e.g., `components/auth-wizard`).
 
-Deep Learning and Model Development:
-- Use PyTorch as the primary framework for deep learning tasks.
-- Implement custom nn.Module classes for model architectures.
-- Utilize PyTorch's autograd for automatic differentiation.
-- Implement proper weight initialization and normalization techniques.
-- Use appropriate loss functions and optimization algorithms.
+### Project Structure
 
-Transformers and LLMs:
-- Use the Transformers library for working with pre-trained models and tokenizers.
-- Implement attention mechanisms and positional encodings correctly.
-- Utilize efficient fine-tuning techniques like LoRA or P-tuning when appropriate.
-- Implement proper tokenization and sequence handling for text data.
+- **Frontend**:  
+  - **Language**: TypeScript  
+  - **Framework**: React  
+  - **UI Library**: Tailwind CSS, Shadcn UI  
+  - **Build Tool**: Vite  
+  - **Directory Structure**:  
+    - `frontend/src/`: Main source code  
+    - `frontend/src/index.html`: Main HTML file  
+    - Configuration Files:  
+      - `vite.config.ts`  
+      - `tsconfig.json`  
+      - `tailwind.config.js`  
+      - `postcss.config.js`  
+    - **Docker Files**:  
+      - `Dockerfile`  
+      - `Dockerfile.dev`
 
-Diffusion Models:
-- Use the Diffusers library for implementing and working with diffusion models.
-- Understand and correctly implement the forward and reverse diffusion processes.
-- Utilize appropriate noise schedulers and sampling methods.
-- Understand and correctly implement the different pipeline, e.g., StableDiffusionPipeline and StableDiffusionXLPipeline, etc.
+- **Backend**:  
+  - **Language**: Python  
+  - **Framework**: FastAPI  
+  - **Database**: PostgreSQL  
+  - **Directory Structure**:  
+    - `backend/src/`: Main source code  
+    - `backend/tests/`: Tests  
+    - `document-processor/`: Document processing utilities  
+    - Environment Configuration:  
+      - `.env` / `.env.example`: Environment variables  
+    - Database Configuration:  
+      - `alembic.ini`  
+      - `ddialog.db`: SQLite database for local development  
+    - **Docker Files**:  
+      - `Dockerfile`  
+      - `Dockerfile.dev`
 
-Model Training and Evaluation:
-- Implement efficient data loading using PyTorch's DataLoader.
-- Use proper train/validation/test splits and cross-validation when appropriate.
-- Implement early stopping and learning rate scheduling.
-- Use appropriate evaluation metrics for the specific task.
-- Implement gradient clipping and proper handling of NaN/Inf values.
+### Code Style and Structure
 
-Gradio Integration:
-- Create interactive demos using Gradio for model inference and visualization.
-- Design user-friendly interfaces that showcase model capabilities.
-- Implement proper error handling and input validation in Gradio apps.
+**Backend (Python/FastAPI)**:
 
-Error Handling and Debugging:
-- Use try-except blocks for error-prone operations, especially in data loading and model inference.
-- Implement proper logging for training progress and errors.
-- Use PyTorch's built-in debugging tools like autograd.detect_anomaly() when necessary.
+- Use `def` for pure functions and `async def` for asynchronous operations.
+- **Type Hints**: Use Python type hints for all function signatures. Prefer Pydantic models for input validation.
+- **File Structure**: Follow clear separation with directories for routes, utilities, static content, and models/schemas.
+- **RORO Pattern**: Use the "Receive an Object, Return an Object" pattern.
+- **Error Handling**:  
+  - Handle errors at the beginning of functions with early returns.  
+  - Use guard clauses and avoid deeply nested if statements.  
+  - Implement proper logging and custom error types.
 
-Performance Optimization:
-- Utilize DataParallel or DistributedDataParallel for multi-GPU training.
-- Implement gradient accumulation for large batch sizes.
-- Use mixed precision training with torch.cuda.amp when appropriate.
-- Profile code to identify and optimize bottlenecks, especially in data loading and preprocessing.
+**Frontend (TypeScript/React)**:
 
-Dependencies:
-- torch
-- transformers
-- diffusers
-- gradio
-- numpy
-- tqdm (for progress bars)
-- tensorboard or wandb (for experiment tracking)
+- **TypeScript Usage**: Use TypeScript for all code. Prefer interfaces over types. Avoid enums; use maps instead.
+- **Functional Components**: Write all components as functional components with proper TypeScript interfaces.
+- **UI and Styling**: Implement responsive design using Tailwind CSS with Shadcn UI, adopting a mobile-first approach.
+- **Performance**:  
+  - Minimize `use client`, `useEffect`, and `setState` hooks. Favor server-side rendering where possible.  
+  - Wrap client components in `Suspense` with fallback for improved performance.
 
-Key Conventions:
-1. Begin projects with clear problem definition and dataset analysis.
-2. Create modular code structures with separate files for models, data loading, training, and evaluation.
-3. Use configuration files (e.g., YAML) for hyperparameters and model settings.
-4. Implement proper experiment tracking and model checkpointing.
-5. Use version control (e.g., git) for tracking changes in code and configurations.
+### Performance Optimization
 
-Refer to the official documentation of PyTorch, Transformers, Diffusers, and Gradio for best practices and up-to-date APIs.
-      
+**Backend**:
+
+- **Asynchronous Operations**: Minimize blocking I/O operations using async functions.
+- **Caching**: Implement caching strategies for frequently accessed data using Redis or in-memory stores.
+- **Lazy Loading**: Use lazy loading techniques for large datasets and API responses.
+
+**Frontend**:
+
+- **React Components**: Favor server-side rendering and avoid heavy client-side rendering where possible.
+- **Dynamic Loading**: Implement dynamic loading for non-critical components and optimize image loading using WebP format with lazy loading.
+
+### Project Conventions
+
+**Backend**:
+
+1. Follow **RESTful API design principles**.
+2. Rely on **FastAPI’s dependency injection system** for managing state and shared resources.
+3. Use **SQLAlchemy 2.0** for ORM features, if applicable.
+4. Ensure **CORS** is properly configured for local development.
+5. No authentication or authorization is required for users to access the platform.
+
+**Frontend**:
+
+1. Optimize **Web Vitals** (LCP, CLS, FID).
+2. Limit `use client` hooks to small, specific components for Web API access.
+3. Use **Docker** for containerization and ensure easy deployment.
+
+### Testing and Deployment
+
+- Implement **unit tests** for both frontend and backend.
+- Use **Docker** and **docker compose** for orchestration in both development and production environments. Avoid using the obsolete `docker-compose` command.
+- Ensure proper input validation, sanitization, and error handling throughout the application.
+

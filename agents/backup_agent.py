@@ -7,6 +7,9 @@ Think of it as your insurance policy for data - always there when you need it.
 import os
 import subprocess
 import json
+import hashlib
+import asyncio
+import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
@@ -58,6 +61,14 @@ class BackupAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("BackupAgent initialized - ready to protect your data")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _backup_hash(self, backup_status, integrity_checks, recovery_tests):
+        return hashlib.sha256(json.dumps({"status": backup_status, "integrity": integrity_checks, "recovery": recovery_tests}, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform backup monitoring and management."""
@@ -423,24 +434,42 @@ class BackupAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Analyze overall backup health using Ollama."""
         try:
-            # Combine all backup data for analysis
-            backup_data = {
-                "backup_status": backup_status,
-                "integrity_checks": integrity_checks,
-                "recovery_tests": recovery_tests
-            }
-            
-            # Use Ollama to analyze backup health
-            analysis_result = await ollama_client.analyze_metrics(backup_data, "Backup health analysis")
-            
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
-                "health_level": analysis_result.risk_level,
-                "recommendations": analysis_result.alternatives,
-                "confidence": analysis_result.confidence,
-                "analysis": analysis_result.decision
-            }
+            # Throttle/caching logic
+            if not hasattr(self, 'analysis_cache'):
+                self.analysis_cache = {}
+            cache_ttl = 300  # 5 min
+            now = datetime.now()
+            backup_hash = self._backup_hash(backup_status, integrity_checks, recovery_tests)
+            cached = self.analysis_cache.get(backup_hash)
+            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+                return cached["result"]
+            try:
+                backup_data = {
+                    "backup_status": backup_status,
+                    "integrity_checks": integrity_checks,
+                    "recovery_tests": recovery_tests
+                }
+                analysis_result = await ollama_client.analyze_metrics(backup_data, "Backup health analysis")
+                result = {
+                    "timestamp": now.isoformat(),
+                    "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
+                    "health_level": analysis_result.risk_level,
+                    "recommendations": analysis_result.alternatives,
+                    "confidence": analysis_result.confidence,
+                    "analysis": analysis_result.decision
+                }
+                self.analysis_cache[backup_hash] = {"result": result, "timestamp": now.isoformat()}
+                return result
+            except Exception as e:
+                self.logger.error(f"Failed to analyze backup health: {e}")
+                return {
+                    "timestamp": now.isoformat(),
+                    "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
+                    "health_level": "unknown",
+                    "recommendations": [],
+                    "confidence": 0.0,
+                    "analysis": "Analysis failed"
+                }
 
         except Exception as e:
             self.logger.error(f"Failed to analyze backup health: {e}")

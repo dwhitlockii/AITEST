@@ -6,8 +6,11 @@ Think of it as the mission control dashboard.
 
 import asyncio
 import json
+import time
+import sys
+import psutil
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,17 +31,200 @@ app = FastAPI(
 # Global state
 system_running = False
 startup_task = None
+startup_time = None
+system_ready = False
 
+# Performance monitoring
+performance_cache = {}
+cache_ttl = 30  # seconds
+last_health_check = None
+health_check_interval = 60  # seconds
+
+# Startup validation results
+startup_validation = {
+    "database": False,
+    "message_bus": False,
+    "agents": False,
+    "llm_provider": False,
+    "file_permissions": False,
+    "system_resources": False
+}
+
+async def validate_startup_requirements():
+    """Validate all startup requirements and log results."""
+    global startup_validation
+    
+    print("🔍 Starting system validation...")
+    
+    # 1. Check file permissions
+    try:
+        import os
+        log_dir = os.path.dirname(config.logging.log_file)
+        os.makedirs(log_dir, exist_ok=True)
+        with open(config.logging.log_file, "a") as f:
+            f.write("")
+        startup_validation["file_permissions"] = True
+        print("✅ File permissions validated")
+    except Exception as e:
+        print(f"❌ File permissions failed: {e}")
+    
+    # 2. Check system resources
+    try:
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('C:\\' if sys.platform == 'win32' else '/')
+        if memory.available > 500 * 1024 * 1024 and disk.free > 1 * 1024 * 1024 * 1024:  # 500MB RAM, 1GB disk
+            startup_validation["system_resources"] = True
+            print("✅ System resources sufficient")
+        else:
+            print("⚠️ System resources low")
+    except Exception as e:
+        print(f"❌ System resource check failed: {e}")
+    
+    # 3. Check database
+    try:
+        from utils.persistence import PersistenceManager
+        persistence = PersistenceManager()
+        await persistence.initialize()
+        startup_validation["database"] = True
+        print("✅ Database initialized")
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+    
+    # 4. Check message bus
+    try:
+        await message_bus.start()
+        startup_validation["message_bus"] = True
+        print("✅ Message bus started")
+    except Exception as e:
+        print(f"❌ Message bus failed: {e}")
+    
+    # 5. Check LLM provider
+    try:
+        from utils.ollama_client import ollama_client
+        if await ollama_client.health_check():
+            startup_validation["llm_provider"] = True
+            print("✅ LLM provider (Ollama) available")
+        else:
+            print("⚠️ LLM provider not available - will use fallback")
+    except Exception as e:
+        print(f"⚠️ LLM provider check failed: {e}")
+    
+    # 6. Validate agents can be created
+    try:
+        from agents import SensorAgent, AnalyzerAgent, RemediatorAgent, CommunicatorAgent
+        test_agents = {
+            "sensor": SensorAgent(),
+            "analyzer": AnalyzerAgent(),
+            "remediator": RemediatorAgent(),
+            "communicator": CommunicatorAgent()
+        }
+        startup_validation["agents"] = True
+        print("✅ Agent classes validated")
+    except Exception as e:
+        print(f"❌ Agent validation failed: {e}")
+    
+    # Summary
+    all_valid = all(startup_validation.values())
+    print(f"\n📊 Startup Validation Summary:")
+    for check, status in startup_validation.items():
+        status_icon = "✅" if status else "❌"
+        print(f"   {status_icon} {check}: {'PASS' if status else 'FAIL'}")
+    
+    if all_valid:
+        print("🎉 All startup requirements validated successfully!")
+    else:
+        print("⚠️ Some startup requirements failed - system may have limited functionality")
+    
+    return all_valid
+
+async def monitor_system_performance():
+    """Monitor system performance and cache results."""
+    global performance_cache, last_health_check
+    
+    while system_running:
+        try:
+            current_time = time.time()
+            
+            # System metrics
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            performance_cache["system_metrics"] = {
+                "cpu_percent": cpu_percent,
+                "memory_percent": memory.percent,
+                "memory_available": memory.available,
+                "disk_percent": disk.percent,
+                "disk_free": disk.free,
+                "timestamp": current_time
+            }
+            
+            # Agent health check (cached)
+            if not last_health_check or (current_time - last_health_check) > health_check_interval:
+                try:
+                    agent_health = {}
+                    for name, agent in orchestrator.agents.items():
+                        if hasattr(agent, 'health_status'):
+                            agent_health[name] = {
+                                "status": agent.health_status,
+                                "running": getattr(agent, 'running', False),
+                                "uptime": getattr(agent, 'uptime', 0)
+                            }
+                    
+                    performance_cache["agent_health"] = agent_health
+                    performance_cache["agent_health_timestamp"] = current_time
+                    last_health_check = current_time
+                except Exception as e:
+                    print(f"Warning: Agent health check failed: {e}")
+            
+            await asyncio.sleep(10)  # Update every 10 seconds
+            
+        except Exception as e:
+            print(f"Performance monitoring error: {e}")
+            await asyncio.sleep(30)
+
+def get_cached_data(key: str, max_age: int = None):
+    """Get cached data if it's still valid."""
+    if key not in performance_cache:
+        return None
+    
+    data = performance_cache[key]
+    if max_age is None:
+        max_age = cache_ttl
+    
+    if time.time() - data.get("timestamp", 0) > max_age:
+        return None
+    
+    return data
 
 @app.on_event("startup")
 async def startup_event():
     """Start the multi-agent system when the web interface starts."""
-    global system_running, startup_task
+    global system_running, startup_task, startup_time, system_ready
 
-    if not system_running:
-        startup_task = asyncio.create_task(start_system())
-        system_running = True
-
+    startup_time = time.time()
+    print("🚀 Starting Multi-Agent System...")
+    
+    # Validate startup requirements
+    validation_passed = await validate_startup_requirements()
+    
+    if validation_passed:
+        try:
+            # Start performance monitoring
+            asyncio.create_task(monitor_system_performance())
+            
+            # Start the orchestrator
+            startup_task = asyncio.create_task(start_system())
+            system_running = True
+            system_ready = True
+            
+            print(f"✅ System started successfully in {time.time() - startup_time:.2f} seconds")
+        except Exception as e:
+            print(f"❌ System startup failed: {e}")
+            system_ready = False
+    else:
+        print("⚠️ System started with limited functionality due to validation failures")
+        system_ready = False
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -46,9 +232,10 @@ async def shutdown_event():
     global system_running
 
     if system_running:
+        print("🛑 Shutting down system...")
         await orchestrator.stop()
         system_running = False
-
+        print("✅ System shutdown complete")
 
 async def start_system():
     """Start the multi-agent system in the background."""
@@ -56,17 +243,111 @@ async def start_system():
 
     try:
         await orchestrator.start()
+        print("🎉 Multi-agent system is running!")
     except Exception as e:
-        print(f"Failed to start system: {e}")
+        print(f"❌ Failed to start system: {e}")
         system_running = False
 
+# Performance monitoring endpoints
+@app.get("/api/performance")
+async def get_performance_metrics():
+    """Get current system performance metrics."""
+    try:
+        cached_metrics = get_cached_data("system_metrics")
+        if cached_metrics:
+            return cached_metrics
+        
+        # Fallback to real-time metrics
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        return {
+            "cpu_percent": cpu_percent,
+            "memory_percent": memory.percent,
+            "memory_available": memory.available,
+            "disk_percent": disk.percent,
+            "disk_free": disk.free,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/startup/status")
+async def get_startup_status():
+    """Get startup validation status."""
+    global startup_validation, system_ready, startup_time
+    
+    return {
+        "system_ready": system_ready,
+        "startup_time": startup_time,
+        "uptime": time.time() - startup_time if startup_time else 0,
+        "validation": startup_validation,
+        "all_valid": all(startup_validation.values())
+    }
+
+@app.get("/api/startup/diagnostics")
+async def get_startup_diagnostics():
+    """Get detailed startup diagnostics."""
+    try:
+        diagnostics = {
+            "system_info": {
+                "platform": sys.platform,
+                "python_version": sys.version,
+                "cpu_count": psutil.cpu_count() or 1,
+                "memory_total": psutil.virtual_memory().total
+            },
+            "file_system": {},
+            "network": {},
+            "processes": {}
+        }
+        
+        # Check file system
+        try:
+            import os
+            log_dir = os.path.dirname(config.logging.log_file)
+            diagnostics["file_system"]["log_directory"] = {
+                "exists": os.path.exists(log_dir),
+                "writable": os.access(log_dir, os.W_OK) if os.path.exists(log_dir) else False,
+                "path": log_dir
+            }
+        except Exception as e:
+            diagnostics["file_system"]["error"] = str(e)
+        
+        # Check network
+        try:
+            import socket
+            diagnostics["network"]["localhost"] = {
+                "reachable": True,
+                "port_8002": False
+            }
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('localhost', 8002))
+            diagnostics["network"]["localhost"]["port_8002"] = (result == 0)
+            sock.close()
+        except Exception as e:
+            diagnostics["network"]["error"] = str(e)
+        
+        # Check processes
+        try:
+            diagnostics["processes"]["current"] = {
+                "pid": os.getpid(),
+                "memory_usage": psutil.Process().memory_info().rss,
+                "cpu_percent": psutil.Process().cpu_percent()
+            }
+        except Exception as e:
+            diagnostics["processes"]["error"] = str(e)
+        
+        return diagnostics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # API Routes
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Main dashboard page."""
+    """Main dashboard page with cutting-edge design, advanced features, and comprehensive data widgets."""
     return """
     <!DOCTYPE html>
     <html lang='en'>
@@ -74,1487 +355,1209 @@ async def root():
         <meta charset='UTF-8'>
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
         <title>AI Agent System Dashboard</title>
-        <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' rel='stylesheet'>
+        <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap' rel='stylesheet'>
         <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css' rel='stylesheet'>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src='https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js'></script>
         <style>
             :root {
-                --primary: #6366f1;
-                --primary-dark: #4f46e5;
-                --accent: #8b5cf6;
-                --bg: #181c2a;
-                --bg-light: #23263a;
-                --card: #23263a;
-                --card-alt: #23263a;
-                --text: #f3f4f6;
-                --text-muted: #a0aec0;
-                --success: #22c55e;
-                --warning: #facc15;
+                --primary: #4f8cff;
+                --secondary: #232946;
+                --background: #f4f6fb;
+                --glass: rgba(255,255,255,0.7);
+                --border: rgba(76,110,245,0.12);
+                --shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+                --radius: 18px;
+                --sidebar-width: 260px;
+                --success: #10b981;
+                --warning: #f59e0b;
                 --danger: #ef4444;
-                --info: #38bdf8;
-                --border: #2d3147;
-                --shadow: 0 4px 24px rgba(0,0,0,0.12);
+                --info: #3b82f6;
             }
-            html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', Arial, sans-serif; background: var(--bg); color: var(--text); }
-            body { min-height: 100vh; display: flex; }
-            .sidebar {
-                width: 240px;
-                background: var(--bg-light);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 32px 0 0 0;
-                position: fixed;
-                top: 0; left: 0; bottom: 0;
-                z-index: 10;
-                box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: 'Inter', Arial, sans-serif;
+                background: var(--background);
+                color: var(--secondary);
             }
-            .sidebar .logo {
-                font-size: 2rem;
-                font-weight: 700;
-                color: var(--primary);
-                margin-bottom: 32px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .sidebar nav {
-                width: 100%;
-            }
-            .sidebar nav a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: var(--text-muted);
-                text-decoration: none;
-                font-size: 1.1rem;
-                padding: 14px 32px;
-                border-left: 4px solid transparent;
-                transition: background 0.2s, color 0.2s, border 0.2s;
-            }
-            .sidebar nav a.active, .sidebar nav a:hover {
-                color: var(--primary);
-                background: rgba(99,102,241,0.08);
-                border-left: 4px solid var(--primary);
-            }
-            .sidebar .spacer { flex: 1; }
-            .sidebar .footer {
-                color: var(--text-muted);
-                font-size: 0.9rem;
-                margin-bottom: 24px;
-            }
-            .main {
-                margin-left: 240px;
-                width: 100%;
+            body {
                 min-height: 100vh;
                 display: flex;
-                flex-direction: column;
+                flex-direction: row;
             }
-            .topbar {
+            nav {
+                width: var(--sidebar-width);
+                min-width: var(--sidebar-width);
+                background: var(--glass);
+                backdrop-filter: blur(16px) saturate(180%);
+                box-shadow: var(--shadow);
+                border-right: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 2rem 1rem 1rem 1rem;
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                z-index: 10;
+                transition: left 0.3s;
+            }
+            nav .logo {
+                font-size: 2rem;
+                font-weight: 800;
+                color: var(--primary);
+                margin-bottom: 2rem;
+                letter-spacing: 2px;
+            }
+            nav ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                width: 100%;
+            }
+            nav ul li {
+                margin: 1.2rem 0;
+            }
+            nav ul li a {
+                text-decoration: none;
+                color: var(--secondary);
+                font-weight: 600;
+                font-size: 1.1rem;
+                padding: 0.7rem 1.2rem;
+                border-radius: var(--radius);
+                display: flex;
+                align-items: center;
+                transition: background 0.2s, color 0.2s;
+            }
+            nav ul li a.active, nav ul li a:hover {
+                background: var(--primary);
+                color: #fff;
+            }
+            .hamburger {
+                display: none;
+                position: absolute;
+                top: 1.5rem;
+                left: 1.5rem;
+                background: none;
+                border: none;
+                font-size: 2rem;
+                color: var(--primary);
+                cursor: pointer;
+                z-index: 20;
+            }
+            main {
+                flex: 1;
+                padding: 2.5rem 2rem 2rem 2rem;
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+                min-width: 0;
+                overflow-y: auto;
+            }
+            .dashboard-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                background: var(--bg-light);
-                padding: 18px 36px;
-                box-shadow: var(--shadow);
-                position: sticky;
-                top: 0;
-                z-index: 5;
+                margin-bottom: 1.5rem;
+                flex-wrap: wrap;
+                gap: 1rem;
             }
-            .topbar .status {
-                display: flex;
-                align-items: center;
-                gap: 24px;
-            }
-            .topbar .status .badge {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 1rem;
-                padding: 6px 16px;
-                border-radius: 16px;
-                background: var(--card);
-                color: var(--text-muted);
-            }
-            .topbar .status .badge.critical { background: var(--danger); color: #fff; }
-            .topbar .status .badge.warning { background: var(--warning); color: #222; }
-            .topbar .status .badge.healthy { background: var(--success); color: #fff; }
-            .topbar .actions {
-                display: flex;
-                gap: 16px;
-            }
-            .llm-banner {
-                width: 100%;
-                background: linear-gradient(90deg, var(--danger), var(--accent));
-                color: #fff;
-                text-align: center;
-                padding: 10px 0;
-                font-weight: 600;
-                font-size: 1.1rem;
-                letter-spacing: 0.5px;
-                display: none;
-            }
-            .llm-banner.active { display: block; }
-            .dashboard {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 32px;
-                padding: 36px 36px 0 36px;
-                flex: 1;
-            }
-            .card {
-                background: var(--card);
-                border-radius: 18px;
-                box-shadow: var(--shadow);
-                padding: 28px 28px 20px 28px;
-                margin-bottom: 32px;
-                transition: box-shadow 0.2s;
-            }
-            .card h2 {
-                font-size: 1.3rem;
-                font-weight: 600;
-                margin: 0 0 18px 0;
-                color: var(--primary);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .agent-cards {
-                display: flex;
-                flex-direction: column;
-                gap: 18px;
-            }
-            .agent-card {
-                background: var(--card-alt);
-                border-radius: 12px;
-                padding: 18px 20px;
-                display: flex;
-                align-items: center;
-                gap: 24px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                transition: box-shadow 0.2s;
-            }
-            .agent-card .icon {
+            .dashboard-header h1 {
                 font-size: 2.2rem;
+                font-weight: 800;
+                margin: 0;
                 color: var(--primary);
-                margin-right: 10px;
             }
-            .agent-card .info {
-                flex: 1;
-            }
-            .agent-card .info .name {
-                font-size: 1.1rem;
-                font-weight: 600;
-                margin-bottom: 4px;
-            }
-            .agent-card .info .status {
-                font-size: 0.98rem;
-                color: var(--text-muted);
-            }
-            .agent-card .badges {
+            .dashboard-header .actions {
                 display: flex;
-                gap: 10px;
+                gap: 1rem;
+                flex-wrap: wrap;
             }
-            .agent-card .badge {
-                font-size: 0.95rem;
-                padding: 4px 12px;
-                border-radius: 12px;
-                background: var(--bg-light);
-                color: var(--text-muted);
+            .glass-card {
+                background: var(--glass);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+                border: 1px solid var(--border);
+                padding: 2rem 1.5rem;
+                margin-bottom: 1.5rem;
+                backdrop-filter: blur(12px) saturate(180%);
+                transition: box-shadow 0.2s;
             }
-            .agent-card .badge.healthy { background: var(--success); color: #fff; }
-            .agent-card .badge.warning { background: var(--warning); color: #222; }
-            .agent-card .badge.critical { background: var(--danger); color: #fff; }
-            .agent-card .badge.llm { background: var(--primary-dark); color: #fff; }
-            .metrics-charts {
+            .glass-card:hover {
+                box-shadow: 0 12px 40px 0 rgba(31,38,135,0.22);
+            }
+            .dashboard-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                margin-bottom: 2rem;
+            }
+            .dashboard-grid.full-width {
+                grid-template-columns: 1fr;
+            }
+            .quick-actions {
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+                margin-bottom: 1rem;
+            }
+            .btn {
+                background: var(--primary);
+                color: #fff;
+                border: none;
+                padding: 0.7rem 1.2rem;
+                border-radius: var(--radius);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 0.9rem;
+            }
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(79, 140, 255, 0.3);
+            }
+            .btn.success { background: var(--success); }
+            .btn.warning { background: var(--warning); }
+            .btn.danger { background: var(--danger); }
+            .btn.info { background: var(--info); }
+            .toast-container {
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                z-index: 1000;
                 display: flex;
                 flex-direction: column;
-                gap: 24px;
+                gap: 1rem;
             }
-            .metrics-charts .chart-card {
-                background: var(--bg-light);
-                border-radius: 12px;
-                padding: 18px 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            .toast {
+                background: var(--glass);
+                backdrop-filter: blur(16px);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 1rem 1.5rem;
+                box-shadow: var(--shadow);
+                min-width: 300px;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
             }
-            .metrics-charts .chart-title {
-                font-size: 1.05rem;
-                font-weight: 600;
-                color: var(--primary);
-                margin-bottom: 8px;
+            .toast.show {
+                transform: translateX(0);
             }
-            .metrics-charts .chart {
-                width: 100%;
-                height: 120px;
-                background: #222;
-                border-radius: 8px;
+            .toast.success { border-left: 4px solid var(--success); }
+            .toast.warning { border-left: 4px solid var(--warning); }
+            .toast.danger { border-left: 4px solid var(--danger); }
+            .toast.info { border-left: 4px solid var(--info); }
+            .toast-header {
                 display: flex;
+                justify-content: space-between;
                 align-items: center;
-                justify-content: center;
-                color: var(--text-muted);
+                margin-bottom: 0.5rem;
+            }
+            .toast-title {
+                font-weight: 600;
+                font-size: 1rem;
+            }
+            .toast-close {
+                background: none;
+                border: none;
+                color: var(--secondary);
+                cursor: pointer;
                 font-size: 1.2rem;
             }
-            .metrics-charts .chart-card.normal .chart {
-                background: var(--success);
-                color: #fff;
-            }
-            .metrics-charts .chart-card.warning .chart {
-                background: var(--warning);
-                color: #222;
-            }
-            .metrics-charts .chart-card.critical .chart {
-                background: var(--danger);
-                color: #fff;
-            }
-            .activity-feed {
-                background: var(--bg-light);
-                border-radius: 12px;
-                padding: 18px 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                margin-bottom: 32px;
-            }
-            .activity-feed .feed-title {
-                font-size: 1.05rem;
-                font-weight: 600;
-                color: var(--primary);
-                margin-bottom: 8px;
-            }
-            .activity-feed .feed-list {
-                max-height: 260px;
-                overflow-y: auto;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            }
-            .activity-feed .feed-item {
-                font-size: 0.98rem;
-                color: var(--text-muted);
-                background: #23263a;
-                border-radius: 8px;
-                padding: 8px 12px;
-                transition: background 0.2s;
-            }
-            .activity-feed .feed-item.critical { background: var(--danger); color: #fff; }
-            .activity-feed .feed-item.warning { background: var(--warning); color: #222; }
-            .activity-feed .feed-item.success { background: var(--success); color: #fff; }
-            @media (max-width: 1100px) {
-                .dashboard { grid-template-columns: 1fr; }
-            }
-            @media (max-width: 700px) {
-                .sidebar { display: none; }
-                .main { margin-left: 0; }
-                .dashboard { padding: 16px 4px 0 4px; }
-                .topbar { padding: 12px 8px; }
-            }
-            .alert-feed .alert-item .ts {
-                font-size: 0.92rem;
-                color: var(--text-muted);
-                margin-left: 8px;
-            }
-            
-            /* Mini Dashboard Styles */
-            .grafana-mini-dashboard {
-                margin-top: 16px;
-            }
-            
-            .mini-panels {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 16px;
-            }
-            
-            .mini-panel {
-                background: var(--bg-light);
-                border-radius: 8px;
-                padding: 12px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                transition: box-shadow 0.2s;
-            }
-            
-            .mini-panel:hover {
-                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            }
-            
-            .mini-panel-header {
+            .toast-message {
                 font-size: 0.9rem;
-                color: var(--text-muted);
-                margin-bottom: 8px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
+                opacity: 0.9;
             }
-            
-            .mini-panel-value {
-                font-size: 1.5rem;
-                font-weight: 600;
-                color: var(--primary);
-                margin-bottom: 8px;
-                text-align: center;
-            }
-            
-            .mini-panel-chart {
-                height: 60px;
+            .loader {
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                padding: 2rem;
+                color: var(--secondary);
+                opacity: 0.7;
             }
-            
-            .mini-panel-chart canvas {
-                max-width: 100%;
-                height: auto;
+            .loader::after {
+                content: '';
+                width: 20px;
+                height: 20px;
+                border: 2px solid var(--border);
+                border-top: 2px solid var(--primary);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-left: 0.5rem;
             }
-            
-            @media (max-width: 768px) {
-                .mini-panels {
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .metric-card {
+                background: var(--glass);
+                border-radius: var(--radius);
+                padding: 1.5rem;
+                text-align: center;
+                border: 1px solid var(--border);
+            }
+            .metric-value {
+                font-size: 2rem;
+                font-weight: 800;
+                color: var(--primary);
+                margin-bottom: 0.5rem;
+            }
+            .metric-label {
+                font-size: 0.9rem;
+                opacity: 0.8;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .status-indicator {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                margin-right: 0.5rem;
+            }
+            .status-healthy { background: var(--success); }
+            .status-warning { background: var(--warning); }
+            .status-critical { background: var(--danger); }
+            .status-unknown { background: #9ca3af; }
+            @media (max-width: 900px) {
+                nav {
+                    position: fixed;
+                    left: -100vw;
+                    top: 0;
+                    height: 100vh;
+                    z-index: 100;
+                    transition: left 0.3s;
+                }
+                nav.open {
+                    left: 0;
+                }
+                .hamburger {
+                    display: block;
+                }
+                main {
+                    padding: 1.2rem;
+                }
+                .dashboard-grid {
                     grid-template-columns: 1fr;
                 }
+                .toast-container {
+                    top: 1rem;
+                    right: 1rem;
+                    left: 1rem;
+                }
+                .toast {
+                    min-width: auto;
+                }
+                /* Configuration management responsive */
+                .glass-card > div:first-child {
+                    flex-direction: column;
+                    gap: 1rem;
+                    align-items: stretch;
+                }
+                .glass-card > div:first-child > div:last-child {
+                    flex-wrap: wrap;
+                }
+                .glass-card > div:first-child > div:last-child .btn {
+                    flex: 1;
+                    min-width: 120px;
+                }
+                /* Logs viewer responsive */
+                #logs-container {
+                    max-height: 300px;
+                    font-size: 0.8rem;
+                }
+                /* Configuration form responsive */
+                .glass-card > div:nth-child(2) {
+                    grid-template-columns: 1fr;
+                    gap: 1.5rem;
+                }
+                /* Input fields responsive */
+                input[type="number"], input[type="url"], input[type="text"], select {
+                    font-size: 16px; /* Prevents zoom on iOS */
+                }
+            }
+            /* Focus styles for accessibility */
+            a:focus, button:focus {
+                outline: 2px solid var(--primary);
+                outline-offset: 2px;
+            }
+            html {
+                scroll-behavior: smooth;
             }
         </style>
     </head>
     <body>
-        <div class='sidebar'>
-            <div class='logo'><i class='fa-solid fa-brain'></i> AI Agent System</div>
-            <nav id='sidebar-nav'>
-                <a href='#dashboard' class='active' id='nav-dashboard'><i class='fa-solid fa-gauge'></i> Dashboard</a>
-                <a href='#agents' id='nav-agents'><i class='fa-solid fa-users'></i> Agents</a>
-                <a href='#metrics' id='nav-metrics'><i class='fa-solid fa-chart-line'></i> Metrics</a>
-                <a href='#activity' id='nav-activity'><i class='fa-solid fa-clock-rotate-left'></i> Activity</a>
-                <a href='#llm' id='nav-llm'><i class='fa-solid fa-robot'></i> LLM Status</a>
-                <a href='#settings' id='nav-settings'><i class='fa-solid fa-gear'></i> Settings</a>
-            </nav>
-            <div class='spacer'></div>
-            <div class='footer'>v1.0 &copy; 2024</div>
-        </div>
-        <div class='main'>
-            <div class='topbar'>
-                <div class='status'>
-                    <span class='badge critical' id='system-alert' style='display:none;'><i class='fa-solid fa-triangle-exclamation'></i> System Critical</span>
-                    <span class='badge healthy' id='system-uptime'><i class='fa-solid fa-clock'></i> Uptime: <span id='uptime-value'>--</span></span>
-                    <span class='badge' id='agent-count'><i class='fa-solid fa-users'></i> Agents: <span id='agent-count-value'>--</span></span>
-                </div>
-                <div class='actions'>
-                    <button onclick='refreshDashboard()' style='background:var(--primary);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:600;cursor:pointer;transition:background 0.2s;'><i class='fa-solid fa-rotate'></i> Refresh</button>
+        <button class="hamburger" aria-label="Open navigation" aria-controls="main-nav" aria-expanded="false" tabindex="0">
+            <i class="fas fa-bars"></i>
+        </button>
+        <nav id="main-nav" aria-label="Main navigation">
+            <div class="logo">AI Agents</div>
+            <ul>
+                <li><a href="#dashboard" class="active" tabindex="0"><i class="fas fa-tachometer-alt"></i>&nbsp;Dashboard</a></li>
+                <li><a href="#agents" tabindex="0"><i class="fas fa-robot"></i>&nbsp;Agents</a></li>
+                <li><a href="#alerts" tabindex="0"><i class="fas fa-bell"></i>&nbsp;Alerts</a></li>
+                <li><a href="#logs" tabindex="0"><i class="fas fa-file-alt"></i>&nbsp;Logs</a></li>
+                <li><a href="#settings" tabindex="0"><i class="fas fa-cog"></i>&nbsp;Settings</a></li>
+            </ul>
+        </nav>
+        <main>
+            <div id="dashboard" class="dashboard-header">
+                <h1>System Dashboard</h1>
+                <div class="actions">
+                    <button id="darkModeToggle" class="btn" aria-label="Toggle dark mode">Dark Mode</button>
+                    <button id="refreshBtn" class="btn info" aria-label="Refresh dashboard"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
             </div>
-            <div class='llm-banner' id='llm-banner'>LLM Quota Exceeded: System is using fallback AI. Please check your OpenAI plan and clear the alert to resume normal operation.</div>
-            <!-- SPA Sections -->
-            <div id='section-dashboard' class='spa-section'>
-                <div class='dashboard' id='dashboard'>
+            
+            <!-- Quick Actions -->
+            <section class="glass-card" aria-label="Quick Actions">
+                <h2 style="margin-top:0;">Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="btn success" onclick="sendCommand('restart', 'all')" aria-label="Restart all agents">
+                        <i class="fas fa-redo"></i> Restart All
+                    </button>
+                    <button class="btn warning" onclick="sendCommand('health_check', 'all')" aria-label="Health check all agents">
+                        <i class="fas fa-heartbeat"></i> Health Check
+                    </button>
+                    <button class="btn info" onclick="sendCommand('status', 'all')" aria-label="Get status of all agents">
+                        <i class="fas fa-info-circle"></i> Get Status
+                    </button>
+                    <button class="btn" onclick="showToast('info', 'System Info', 'System information refreshed')" aria-label="Refresh system info">
+                        <i class="fas fa-cog"></i> System Info
+                    </button>
+                </div>
+            </section>
+
+            <!-- System Metrics Overview -->
+            <div class="dashboard-grid">
+                <section id="agents" class="glass-card" aria-label="System Overview">
+                    <h2 style="margin-top:0;">System Overview</h2>
+                    <div id="system-overview" aria-live="polite">
+                        <div class="loader" id="system-overview-loader">Loading system overview...</div>
+                    </div>
+                </section>
+                
+                <section class="glass-card" aria-label="System Health">
+                    <h2 style="margin-top:0;">System Health</h2>
+                    <div id="system-health" aria-live="polite">
+                        <div class="loader" id="system-health-loader">Loading health metrics...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Agent Status with Chart -->
+            <section class="glass-card" aria-label="Agent Status">
+                <h2 style="margin-top:0;">Agent Status</h2>
+                <div id="agent-status" aria-live="polite">
+                    <div class="loader" id="agent-status-loader">Loading agent status...</div>
+                </div>
+                <div id="agent-status-chart" style="width:100%;height:300px;margin-top:1rem;"></div>
+            </section>
+
+            <!-- Live Alerts and Activity Feed -->
+            <div class="dashboard-grid">
+                <section id="alerts" class="glass-card" aria-label="Live Alerts">
+                    <h2 style="margin-top:0;">Live Alerts</h2>
+                    <div id="live-alerts" aria-live="polite">
+                        <div class="loader" id="live-alerts-loader">Loading alerts...</div>
+                    </div>
+                </section>
+                
+                <section class="glass-card" aria-label="Activity Feed">
+                    <h2 style="margin-top:0;">Activity Feed</h2>
+                    <div id="activity-feed" aria-live="polite">
+                        <div class="loader" id="activity-feed-loader">Loading activity...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- System Metrics Charts -->
+            <section class="glass-card" aria-label="System Metrics">
+                <h2 style="margin-top:0;">System Metrics</h2>
+                <div id="system-metrics-chart" style="width:100%;height:400px;"></div>
+            </section>
+
+            <!-- Logs Viewer -->
+            <section id="logs" class="glass-card" aria-label="System Logs">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h2 style="margin:0;">System Logs</h2>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        <select id="log-level-filter" style="padding:0.3rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                            <option value="all">All Levels</option>
+                            <option value="INFO">Info</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="ERROR">Error</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                        <button class="btn" onclick="refreshLogs()" aria-label="Refresh logs">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn" onclick="clearLogs()" aria-label="Clear logs">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;">
+                            <input type="checkbox" id="auto-scroll-logs" checked>
+                            Auto-scroll
+                        </label>
+                    </div>
+                </div>
+                <div id="logs-container" style="background:rgba(0,0,0,0.05);border-radius:12px;padding:1rem;max-height:400px;overflow-y:auto;font-family:'Courier New',monospace;font-size:0.85rem;line-height:1.4;">
+                    <div id="logs-content" aria-live="polite">
+                        <div class="loader">Loading logs...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Configuration Management -->
+            <section id="settings" class="glass-card" aria-label="Configuration Management">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h2 style="margin:0;">Configuration</h2>
+                    <div style="display:flex;gap:0.5rem;">
+                        <button class="btn success" onclick="saveConfig()" aria-label="Save configuration">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                        <button class="btn warning" onclick="resetConfig()" aria-label="Reset configuration">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button class="btn info" onclick="exportConfig()" aria-label="Export configuration">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+                    <!-- System Thresholds -->
                     <div>
-                        <div class='card' id='agent-health-card'>
-                            <h2><i class='fa-solid fa-users'></i> Agent Health</h2>
-                            <div class='agent-cards' id='agent-cards'></div>
-                        </div>
-                        <div class='card' id='metrics-card'>
-                            <h2><i class='fa-solid fa-chart-line'></i> System Metrics</h2>
-                            <div class='grafana-mini-dashboard'>
-                                <div class='mini-panels'>
-                                    <div class='mini-panel'>
-                                        <div class='mini-panel-header'>
-                                            <i class='fa-solid fa-microchip'></i> CPU
-                                        </div>
-                                        <div class='mini-panel-value' id='dashboard-cpu'>--</div>
-                                        <div class='mini-panel-chart'>
-                                            <canvas id='dashboard-cpu-chart' width='200' height='60'></canvas>
-                                        </div>
-                                    </div>
-                                    <div class='mini-panel'>
-                                        <div class='mini-panel-header'>
-                                            <i class='fa-solid fa-memory'></i> Memory
-                                        </div>
-                                        <div class='mini-panel-value' id='dashboard-memory'>--</div>
-                                        <div class='mini-panel-chart'>
-                                            <canvas id='dashboard-memory-chart' width='200' height='60'></canvas>
-                                        </div>
-                                    </div>
-                                    <div class='mini-panel'>
-                                        <div class='mini-panel-header'>
-                                            <i class='fa-solid fa-hdd'></i> Disk
-                                        </div>
-                                        <div class='mini-panel-value' id='dashboard-disk'>--</div>
-                                        <div class='mini-panel-chart'>
-                                            <canvas id='dashboard-disk-chart' width='200' height='60'></canvas>
-                                        </div>
-                                    </div>
-                                    <div class='mini-panel'>
-                                        <div class='mini-panel-header'>
-                                            <i class='fa-solid fa-gauge-high'></i> Load
-                                        </div>
-                                        <div class='mini-panel-value' id='dashboard-load'>--</div>
-                                        <div class='mini-panel-chart'>
-                                            <canvas id='dashboard-load-chart' width='200' height='60'></canvas>
-                                        </div>
-                                    </div>
-                                </div>
+                        <h3 style="margin-top:0;color:var(--primary);">System Thresholds</h3>
+                        <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div>
+                                <label for="cpu-warning">CPU Warning (%)</label>
+                                <input type="number" id="cpu-warning" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                            </div>
+                            <div>
+                                <label for="cpu-critical">CPU Critical (%)</label>
+                                <input type="number" id="cpu-critical" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                            </div>
+                            <div>
+                                <label for="memory-warning">Memory Warning (%)</label>
+                                <input type="number" id="memory-warning" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                            </div>
+                            <div>
+                                <label for="memory-critical">Memory Critical (%)</label>
+                                <input type="number" id="memory-critical" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--glass);">
+                            </div>
+                            <div>
+                                <label for="disk-warning">Disk Warning (%)</label>
+                                <input type="number" id="disk-warning" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                            </div>
+                            <div>
+                                <label for="disk-critical">Disk Critical (%)</label>
+                                <input type="number" id="disk-critical" min="0" max="100" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
                             </div>
                         </div>
                     </div>
+
+                    <!-- Agent Settings -->
                     <div>
-                        <div class='activity-feed' id='activity-feed'>
-                            <div class='feed-title'><i class='fa-solid fa-clock-rotate-left'></i> Activity Feed</div>
-                            <div class='feed-list' id='feed-list'></div>
-                        </div>
-                        <div class='card' id='llm-status-card'>
-                            <h2><i class='fa-solid fa-robot'></i> LLM Status</h2>
-                            <div id='llm-status'></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id='section-agents' class='spa-section' style='display:none;'>
-                <div class='card'><h2><i class='fa-solid fa-users'></i> Agents</h2><div id='agents-detail'></div></div>
-            </div>
-            <div id='section-metrics' class='spa-section' style='display:none;'>
-                <div class='grafana-dashboard'>
-                    <div class='dashboard-header'>
-                        <h2><i class='fa-solid fa-chart-line'></i> System Metrics Dashboard</h2>
-                        <div class='dashboard-controls'>
-                            <span class='refresh-indicator' id='refresh-indicator'>Auto-refresh: ON</span>
-                            <button onclick='toggleAutoRefresh()' class='btn-secondary'><i class='fa-solid fa-sync-alt'></i> Toggle Auto-refresh</button>
-                        </div>
-                    </div>
-                    
-                    <div class='grafana-grid'>
-                        <!-- CPU Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-microchip'></i> CPU Usage</h3>
-                                <div class='panel-controls'>
-                                    <span class='panel-value' id='cpu-value'>--</span>
-                                </div>
+                        <h3 style="margin-top:0;color:var(--primary);">Agent Settings</h3>
+                        <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div>
+                                <label for="check-interval">Check Interval (seconds)</label>
+                                <input type="number" id="check-interval" min="1" max="3600" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
                             </div>
-                            <div class='panel-content'>
-                                <canvas id='cpu-chart' width='400' height='200'></canvas>
+                            <div>
+                                <label for="log-level">Log Level</label>
+                                <select id="log-level" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
+                                    <option value="DEBUG">Debug</option>
+                                    <option value="INFO">Info</option>
+                                    <option value="WARNING">Warning</option>
+                                    <option value="ERROR">Error</option>
+                                    <option value="CRITICAL">Critical</option>
+                                </select>
                             </div>
-                        </div>
-                        
-                        <!-- Memory Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-memory'></i> Memory Usage</h3>
-                                <div class='panel-controls'>
-                                    <span class='panel-value' id='memory-value'>--</span>
-                                </div>
+                            <div>
+                                <label for="web-port">Web Interface Port</label>
+                                <input type="number" id="web-port" min="1024" max="65535" step="1" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
                             </div>
-                            <div class='panel-content'>
-                                <canvas id='memory-chart' width='400' height='200'></canvas>
+                            <div>
+                                <label for="ollama-url">Ollama URL</label>
+                                <input type="url" id="ollama-url" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
                             </div>
-                        </div>
-                        
-                        <!-- Disk Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-hdd'></i> Disk Usage</h3>
-                                <div class='panel-controls'>
-                                    <span class='panel-value' id='disk-value'>--</span>
-                                </div>
+                            <div>
+                                <label for="ollama-model">Ollama Model</label>
+                                <input type="text" id="ollama-model" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--glass);">
                             </div>
-                            <div class='panel-content'>
-                                <canvas id='disk-chart' width='400' height='200'></canvas>
-                            </div>
-                        </div>
-                        
-                        <!-- System Load Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-gauge-high'></i> System Load</h3>
-                                <div class='panel-controls'>
-                                    <span class='panel-value' id='load-value'>--</span>
-                                </div>
-                            </div>
-                            <div class='panel-content'>
-                                <canvas id='load-chart' width='400' height='200'></canvas>
-                            </div>
-                        </div>
-                        
-                        <!-- Network Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-network-wired'></i> Network I/O</h3>
-                                <div class='panel-controls'>
-                                    <span class='panel-value' id='network-value'>--</span>
-                                </div>
-                            </div>
-                            <div class='panel-content'>
-                                <canvas id='network-chart' width='400' height='200'></canvas>
-                            </div>
-                        </div>
-                        
-                        <!-- System Info Panel -->
-                        <div class='grafana-panel'>
-                            <div class='panel-header'>
-                                <h3><i class='fa-solid fa-info-circle'></i> System Information</h3>
-                            </div>
-                            <div class='panel-content'>
-                                <div id='system-info' class='info-grid'></div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <input type="checkbox" id="persistence-enabled">
+                                <label for="persistence-enabled">Enable Database Persistence</label>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div id='section-activity' class='spa-section' style='display:none;'>
-                <div class='card'><h2><i class='fa-solid fa-clock-rotate-left'></i> Activity</h2><div id='activity-detail'></div></div>
-            </div>
-            <div id='section-llm' class='spa-section' style='display:none;'>
-                <div class='card'><h2><i class='fa-solid fa-robot'></i> LLM Status</h2><div id='llm-detail'></div></div>
-            </div>
-            <div id='section-settings' class='spa-section' style='display:none;'>
-                <div class='card'><h2><i class='fa-solid fa-gear'></i> Settings</h2><div id='settings-detail'></div></div>
-            </div>
-        </div>
+
+                <!-- Current Configuration Display -->
+                <div style="margin-top:2rem;">
+                    <h3 style="margin-top:0;color:var(--primary);">Current Configuration</h3>
+                    <div id="current-config" style="background:rgba(0,0,0,0.05);border-radius:12px;padding:1rem;max-height:200px;overflow-y:auto;font-family:'Courier New',monospace;font-size:0.85rem;">
+                        <div class="loader">Loading configuration...</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notifications Container -->
+        <div class="toast-container" id="toast-container" aria-live="polite" aria-label="Notifications"></div>
+
         <script>
-            // --- SPA Navigation Logic ---
-            const sections = ['dashboard', 'agents', 'metrics', 'activity', 'llm', 'settings'];
-            function showSection(section) {
-                for (const sec of sections) {
-                    document.getElementById('section-' + sec).style.display = (sec === section) ? '' : 'none';
-                    const nav = document.getElementById('nav-' + sec);
-                    if (nav) nav.classList.toggle('active', sec === section);
-                }
-                // Load data for the section
-                loadSectionData(section);
-            }
-            function handleNavClick(e) {
-                if (e.target.tagName === 'A') {
-                    const hash = e.target.getAttribute('href').replace('#', '');
-                    showSection(hash);
-                }
-            }
-            document.getElementById('sidebar-nav').addEventListener('click', function(e) {
-                if (e.target.tagName === 'A') {
-                    e.preventDefault();
-                    const hash = e.target.getAttribute('href').replace('#', '');
-                    window.location.hash = hash;
-                    showSection(hash);
-                }
-            });
-            window.addEventListener('hashchange', function() {
-                const hash = window.location.hash.replace('#', '') || 'dashboard';
-                showSection(hash);
-            });
-            // On load, show correct section
-            window.addEventListener('DOMContentLoaded', function() {
-                const hash = window.location.hash.replace('#', '') || 'dashboard';
-                showSection(hash);
-            });
-
-            // --- Section Data Loading ---
-            async function loadSectionData(section) {
-                const container = document.getElementById(section + '-detail');
-                if (!container) return;
-
-                // Show loading state
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
-
-                try {
-                    switch (section) {
-                        case 'agents':
-                            await loadAgentsData(container);
-                            break;
-                        case 'metrics':
-                            await loadMetricsData(container);
-                            break;
-                        case 'activity':
-                            await loadActivityData(container);
-                            break;
-                        case 'llm':
-                            await loadLLMData(container);
-                            break;
-                        case 'settings':
-                            await loadSettingsData(container);
-                            break;
-                    }
-                } catch (error) {
-                    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--danger);"><i class="fa-solid fa-exclamation-triangle"></i> Error loading data: ${error.message}</div>`;
-                }
-            }
-
-            async function loadAgentsData(container) {
-                const response = await fetch('/api/agents');
-                const agents = await response.json();
-                
-                let html = '<div class="agent-cards">';
-                for (const [name, agent] of Object.entries(agents)) {
-                    let icon = 'fa-user-robot';
-                    if (name.toLowerCase().includes('sensor')) icon = 'fa-eye';
-                    if (name.toLowerCase().includes('analyzer')) icon = 'fa-brain';
-                    if (name.toLowerCase().includes('remediator')) icon = 'fa-screwdriver-wrench';
-                    if (name.toLowerCase().includes('communicator')) icon = 'fa-bullhorn';
-                    // New agent icons
-                    if (name.toLowerCase().includes('security')) icon = 'fa-shield-halved';
-                    if (name.toLowerCase().includes('network')) icon = 'fa-network-wired';
-                    if (name.toLowerCase().includes('application')) icon = 'fa-window-maximize';
-                    if (name.toLowerCase().includes('predictive')) icon = 'fa-crystal-ball';
-                    if (name.toLowerCase().includes('compliance')) icon = 'fa-clipboard-check';
-                    if (name.toLowerCase().includes('backup')) icon = 'fa-database';
-                    
-                    let health = agent.health || 'unknown';
-                    let healthClass = health;
-                    let llm = agent.llm_provider || 'none';
-                    let badges = `<span class='badge ${healthClass}'>${health}</span>`;
-                    if (llm && llm !== 'none') badges += `<span class='badge llm'>LLM: ${llm}</span>`;
-                    
-                    html += `
-                        <div class='agent-card'>
-                            <span class='icon'><i class='fa-solid ${icon}'></i></span>
-                            <div class='info'>
-                                <div class='name'>${name}</div>
-                                <div class='status'>Uptime: ${formatUptime(agent.uptime)} | Checks: ${agent.check_count || 0} | Errors: ${agent.error_count || 0}</div>
-                            </div>
-                            <div class='badges'>${badges}</div>
-                        </div>
-                    `;
-                }
-                html += '</div>';
-                container.innerHTML = html;
-            }
-
-            async function loadMetricsData(container) {
-                const response = await fetch('/api/metrics');
-                const metrics = await response.json();
-                
-                let html = '<div class="metrics-charts">';
-                
-                // Check if we have valid metrics data
-                if (metrics && typeof metrics === 'object' && !metrics.error) {
-                    // CPU Metrics
-                    if (metrics.cpu && metrics.cpu.usage_percent !== undefined) {
-                        const cpuUsage = metrics.cpu.usage_percent;
-                        const cpuClass = cpuUsage > 90 ? 'critical' : cpuUsage > 75 ? 'warning' : 'normal';
-                        html += `<div class='chart-card ${cpuClass}'><div class='chart-title'>CPU Usage</div><div class='chart'>${cpuUsage.toFixed(1)}%</div></div>`;
-                    }
-                    
-                    // Memory Metrics
-                    if (metrics.memory && metrics.memory.usage_percent !== undefined) {
-                        const memUsage = metrics.memory.usage_percent;
-                        const memClass = memUsage > 95 ? 'critical' : memUsage > 85 ? 'warning' : 'normal';
-                        html += `<div class='chart-card ${memClass}'><div class='chart-title'>Memory Usage</div><div class='chart'>${memUsage.toFixed(1)}%</div></div>`;
-                    }
-                    
-                    // Disk Metrics
-                    if (metrics.disk) {
-                        for (const [path, diskData] of Object.entries(metrics.disk)) {
-                            if (diskData.usage_percent !== undefined) {
-                                const diskUsage = diskData.usage_percent;
-                                const diskClass = diskUsage > 95 ? 'critical' : diskUsage > 85 ? 'warning' : 'normal';
-                                html += `<div class='chart-card ${diskClass}'><div class='chart-title'>Disk Usage (${path})</div><div class='chart'>${diskUsage.toFixed(1)}%</div></div>`;
-                            }
-                        }
-                    }
-                    
-                    // Performance Metrics
-                    if (metrics.performance && metrics.performance.system_load_score !== undefined) {
-                        const loadScore = metrics.performance.system_load_score;
-                        const healthStatus = metrics.performance.health_status || 'unknown';
-                        const loadClass = healthStatus === 'critical' ? 'critical' : healthStatus === 'warning' ? 'warning' : 'normal';
-                        html += `<div class='chart-card ${loadClass}'><div class='chart-title'>System Load</div><div class='chart'>${loadScore.toFixed(1)}% (${healthStatus})</div></div>`;
-                    }
-                    
-                    // Network Metrics (if available)
-                    if (metrics.network) {
-                        for (const [interface, netData] of Object.entries(metrics.network)) {
-                            if (netData.bytes_sent !== undefined && netData.bytes_recv !== undefined) {
-                                html += `<div class='chart-card'><div class='chart-title'>Network (${interface})</div><div class='chart'>↑ ${formatBytes(netData.bytes_sent)} ↓ ${formatBytes(netData.bytes_recv)}</div></div>`;
-                            }
-                        }
-                    }
-                    
-                    // System Info
-                    if (metrics.system_info) {
-                        html += `<div class='chart-card'><div class='chart-title'>System Info</div><div class='chart'>${metrics.system_info.platform} | ${metrics.system_info.hostname}</div></div>`;
-                    }
-                    
-                    // Timestamp
-                    if (metrics.timestamp) {
-                        const timestamp = new Date(metrics.timestamp).toLocaleString();
-                        html += `<div class='chart-card'><div class='chart-title'>Last Updated</div><div class='chart'>${timestamp}</div></div>`;
-                    }
-                } else {
-                    // No metrics available
-                    html += `<div class='chart-card'><div class='chart-title'>No Metrics Available</div><div class='chart'>${metrics.error || 'Metrics not collected yet'}</div></div>`;
-                }
-                
-                html += '</div>';
-                container.innerHTML = html;
-            }
-
-            async function loadActivityData(container) {
-                const response = await fetch('/api/activity?limit=20');
-                const activity = await response.json();
-                
-                let html = '<div class="activity-feed">';
-                if (activity && Array.isArray(activity) && activity.length > 0) {
-                    for (const item of activity) {
-                        let cls = 'feed-item';
-                        if (item.severity === 'critical') cls += ' critical';
-                        if (item.severity === 'warning') cls += ' warning';
-                        if (item.severity === 'success') cls += ' success';
-                        html += `<div class='${cls}'>${item.timestamp ? `<b>${item.timestamp.split('T')[1].slice(0,8)}</b> ` : ''}${item.description || item.message || 'Event'}</div>`;
-                    }
-                } else {
-                    html += '<div class="feed-item">No recent activity</div>';
-                }
-                html += '</div>';
-                container.innerHTML = html;
-            }
-
-            async function loadLLMData(container) {
-                const [llmStatus, llmAgents] = await Promise.all([
-                    fetch('/api/llm_status').then(r => r.json()),
-                    fetch('/api/llm_agents').then(r => r.json())
-                ]);
-                
-                let html = '';
-                if (llmStatus.llm_quota_alert_active) {
-                    html += `<div class='feed-item critical'><i class='fa-solid fa-triangle-exclamation'></i> ${llmStatus.llm_quota_alert_message || 'LLM Quota Exceeded'}</div>`;
-                } else {
-                    html += `<div class='feed-item success'><i class='fa-solid fa-check-circle'></i> LLMs are healthy and available.</div>`;
-                }
-                if (llmAgents && Object.keys(llmAgents).length > 0) {
-                    html += `<div style='margin-top:10px;'><b>LLM Providers:</b></div>`;
-                    for (const [agent, provider] of Object.entries(llmAgents)) {
-                        html += `<div class='feed-item'><b>${agent}:</b> ${provider}</div>`;
-                    }
-                }
-                container.innerHTML = html;
-            }
-
-            async function loadSettingsData(container) {
-                const response = await fetch('/api/config');
-                const config = await response.json();
-                
-                let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
-                
-                // Thresholds
-                html += '<div><h3>Thresholds</h3>';
-                if (config.thresholds) {
-                    for (const [key, value] of Object.entries(config.thresholds)) {
-                        html += `<div style="margin:5px 0;"><b>${key}:</b> ${value}</div>`;
-                    }
-                }
-                html += '</div>';
-                
-                // Agent Config
-                html += '<div><h3>Agent Configuration</h3>';
-                if (config.agents) {
-                    for (const [name, agent] of Object.entries(config.agents)) {
-                        html += `<div style="margin:5px 0;"><b>${name}:</b> ${agent.check_interval}s interval</div>`;
-                    }
-                }
-                html += '</div>';
-                
-                // System Config
-                html += '<div><h3>System Configuration</h3>';
-                html += `<div style="margin:5px 0;"><b>Persistence:</b> ${config.persistence_enabled ? 'Enabled' : 'Disabled'}</div>`;
-                html += `<div style="margin:5px 0;"><b>Auto Healing:</b> ${config.auto_healing_enabled ? 'Enabled' : 'Disabled'}</div>`;
-                html += `<div style="margin:5px 0;"><b>Plugins:</b> ${config.plugins_enabled ? 'Enabled' : 'Disabled'}</div>`;
-                html += '</div>';
-                
-                // LLM Config
-                html += '<div><h3>LLM Configuration</h3>';
-                if (config.gpt) {
-                    html += `<div style="margin:5px 0;"><b>Model:</b> ${config.gpt.model}</div>`;
-                    html += `<div style="margin:5px 0;"><b>Max Tokens:</b> ${config.gpt.max_tokens}</div>`;
-                    html += `<div style="margin:5px 0;"><b>Temperature:</b> ${config.gpt.temperature}</div>`;
-                }
-                html += '</div>';
-                
-                html += '</div>';
-                container.innerHTML = html;
-            }
-
-            // --- Dashboard Data Fetching & Rendering ---
-            async function fetchDashboardData() {
-                try {
-                    // Fetch system info
-                    const systemResponse = await fetch('/api/system');
-                    const systemData = await systemResponse.json();
-                    
-                    // Update system status
-                    if (systemData.uptime !== undefined) {
-                        document.getElementById('uptime-value').textContent = formatUptime(systemData.uptime);
-                    }
-                    if (systemData.agent_count !== undefined) {
-                        document.getElementById('agent-count-value').textContent = systemData.agent_count;
-                    }
-                    
-                    // Fetch and update metrics
-                    const metricsResponse = await fetch('/api/metrics');
-                    const metrics = await metricsResponse.json();
-                    
-                    if (metrics && typeof metrics === 'object' && !metrics.error) {
-                        updateDashboardCharts(metrics);
-                    }
-                    
-                    // Fetch agents
-                    const agentsResponse = await fetch('/api/agents');
-                    const agents = await agentsResponse.json();
-                    
-                    // Update agent cards
-                    const agentCardsContainer = document.getElementById('agent-cards');
-                    if (agentCardsContainer) {
-                        let html = '';
-                        for (const [name, agent] of Object.entries(agents)) {
-                            let icon = 'fa-user-robot';
-                            if (name.toLowerCase().includes('sensor')) icon = 'fa-eye';
-                            if (name.toLowerCase().includes('analyzer')) icon = 'fa-brain';
-                            if (name.toLowerCase().includes('remediator')) icon = 'fa-screwdriver-wrench';
-                            if (name.toLowerCase().includes('communicator')) icon = 'fa-bullhorn';
-                            // New agent icons
-                            if (name.toLowerCase().includes('security')) icon = 'fa-shield-halved';
-                            if (name.toLowerCase().includes('network')) icon = 'fa-network-wired';
-                            if (name.toLowerCase().includes('application')) icon = 'fa-window-maximize';
-                            if (name.toLowerCase().includes('predictive')) icon = 'fa-crystal-ball';
-                            if (name.toLowerCase().includes('compliance')) icon = 'fa-clipboard-check';
-                            if (name.toLowerCase().includes('backup')) icon = 'fa-database';
-                            
-                            let health = agent.health || 'unknown';
-                            let healthClass = health;
-                            let llm = agent.llm_provider || 'none';
-                            let badges = `<span class='badge ${healthClass}'>${health}</span>`;
-                            if (llm && llm !== 'none') badges += `<span class='badge llm'>LLM: ${llm}</span>`;
-                            
-                            html += `
-                                <div class='agent-card'>
-                                    <span class='icon'><i class='fa-solid ${icon}'></i></span>
-                                    <div class='info'>
-                                        <div class='name'>${name}</div>
-                                        <div class='status'>Uptime: ${formatUptime(agent.uptime)} | Checks: ${agent.check_count || 0} | Errors: ${agent.error_count || 0}</div>
-                                    </div>
-                                    <div class='badges'>${badges}</div>
-                                </div>
-                            `;
-                        }
-                        agentCardsContainer.innerHTML = html;
-                    }
-                    
-                    // Fetch activity
-                    const activityResponse = await fetch('/api/activity?limit=10');
-                    const activity = await activityResponse.json();
-                    
-                    // Update activity feed
-                    const feedList = document.getElementById('feed-list');
-                    if (feedList) {
-                        let html = '';
-                        if (activity && Array.isArray(activity) && activity.length > 0) {
-                            for (const item of activity) {
-                                let cls = 'feed-item';
-                                if (item.severity === 'critical') cls += ' critical';
-                                if (item.severity === 'warning') cls += ' warning';
-                                if (item.severity === 'success') cls += ' success';
-                                html += `<div class='${cls}'>${item.timestamp ? `<b>${item.timestamp.split('T')[1].slice(0,8)}</b> ` : ''}${item.description || item.message || 'Event'}</div>`;
-                            }
-                        } else {
-                            html += '<div class="feed-item">No recent activity</div>';
-                        }
-                        feedList.innerHTML = html;
-                    }
-                    
-                    // Fetch LLM status
-                    const llmResponse = await fetch('/api/llm_status');
-                    const llmData = await llmResponse.json();
-                    
-                    // Update LLM status
-                    const llmStatusContainer = document.getElementById('llm-status');
-                    if (llmStatusContainer) {
-                        let html = '';
-                        if (llmData.ollama && llmData.ollama.available) {
-                            html += `<div style='color:var(--success);margin-bottom:8px;'><i class='fa-solid fa-check-circle'></i> Ollama Available</div>`;
-                            if (llmData.ollama.models && llmData.ollama.models.length > 0) {
-                                html += `<div style='font-size:0.9rem;color:var(--text-muted);'>Models: ${llmData.ollama.models.join(', ')}</div>`;
-                            }
-                        } else {
-                            html += `<div style='color:var(--danger);'><i class='fa-solid fa-times-circle'></i> Ollama Not Available</div>`;
-                        }
-                        llmStatusContainer.innerHTML = html;
-                    }
-                    
-                } catch (error) {
-                    console.error('Error fetching dashboard data:', error);
-                }
-            }
+        // Toast notification system
+        function showToast(type, title, message, duration = 5000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <span class="toast-title">${title}</span>
+                    <button class="toast-close" aria-label="Close notification">&times;</button>
+                </div>
+                <div class="toast-message">${message}</div>
+            `;
             
-            // Initialize dashboard charts on page load
-            window.addEventListener('DOMContentLoaded', function() {
+            container.appendChild(toast);
+            
+            // Show animation
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Auto-remove
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => container.removeChild(toast), 300);
+            }, duration);
+            
+            // Manual close
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                toast.classList.remove('show');
+                setTimeout(() => container.removeChild(toast), 300);
+            });
+        }
+
+        // Hamburger menu for mobile
+        const hamburger = document.querySelector('.hamburger');
+        const nav = document.getElementById('main-nav');
+        if (hamburger && nav) {
+            hamburger.addEventListener('click', () => {
+                const expanded = nav.classList.toggle('open');
+                hamburger.setAttribute('aria-expanded', expanded);
+            });
+            // Close nav on link click (mobile)
+            nav.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    nav.classList.remove('open');
+                    hamburger.setAttribute('aria-expanded', false);
+                });
+            });
+            // Keyboard accessibility for hamburger
+            hamburger.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    hamburger.click();
+                }
+            });
+        }
+        // Always show sidebar on desktop
+        function handleResizeNav() {
+            if (window.innerWidth > 900) {
+                nav.classList.remove('open');
+                nav.style.left = '';
+            }
+        }
+        window.addEventListener('resize', handleResizeNav);
+        handleResizeNav();
+
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            if(document.body.classList.contains('dark-mode')) {
+                document.documentElement.style.setProperty('--background', '#232946');
+                document.documentElement.style.setProperty('--secondary', '#f4f6fb');
+                document.documentElement.style.setProperty('--glass', 'rgba(35,41,70,0.85)');
+                darkModeToggle.textContent = 'Light Mode';
+            } else {
+                document.documentElement.style.setProperty('--background', '#f4f6fb');
+                document.documentElement.style.setProperty('--secondary', '#232946');
+                document.documentElement.style.setProperty('--glass', 'rgba(255,255,255,0.7)');
+                darkModeToggle.textContent = 'Dark Mode';
+            }
+            localStorage.setItem('dashboard-dark-mode', document.body.classList.contains('dark-mode'));
+        });
+
+        // Persist dark mode
+        if(localStorage.getItem('dashboard-dark-mode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.documentElement.style.setProperty('--background', '#232946');
+            document.documentElement.style.setProperty('--secondary', '#f4f6fb');
+            document.documentElement.style.setProperty('--glass', 'rgba(35,41,70,0.85)');
+            darkModeToggle.textContent = 'Light Mode';
+        }
+
+        // Send command function
+        async function sendCommand(command, target = 'all') {
+            try {
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command, target })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showToast('success', 'Command Sent', result.message || `${command} sent to ${target}`, 3000);
+                } else {
+                    showToast('danger', 'Command Failed', result.message || `Failed to send ${command} command`, 5000);
+                }
+                // Refresh relevant data
                 setTimeout(() => {
-                    initializeDashboardCharts();
-                    fetchDashboardData();
-                }, 100);
-            });
-            
-            fetchDashboardData();
-            setInterval(fetchDashboardData, 10000);
+                    loadAgentStatus();
+                    loadSystemOverview();
+                }, 1000);
+            } catch (error) {
+                showToast('danger', 'Command Failed', `Failed to send ${command} command`, 5000);
+            }
+        }
 
-            // Dashboard mini charts
-            let dashboardCharts = {};
-            
-            // Initialize dashboard mini charts
-            function initializeDashboardCharts() {
-                const miniChartOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 500,
-                        easing: 'easeInOutQuart'
-                    },
-                    scales: {
-                        x: {
-                            display: false
-                        },
-                        y: {
-                            display: false
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    elements: {
-                        point: {
-                            radius: 0
-                        },
-                        line: {
-                            tension: 0.4
-                        }
-                    }
-                };
-                
-                // Dashboard CPU Chart
-                const dashboardCpuCtx = document.getElementById('dashboard-cpu-chart');
-                if (dashboardCpuCtx) {
-                    dashboardCharts.cpu = new Chart(dashboardCpuCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'CPU',
-                                data: [],
-                                borderColor: '#6366f1',
-                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: miniChartOptions
-                    });
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            showToast('info', 'Refreshing', 'Dashboard data is being refreshed...', 2000);
+            loadSystemOverview();
+            loadAgentStatus();
+            loadLiveAlerts();
+            loadActivityFeed();
+            loadSystemHealth();
+        });
+
+        // ECharts chart instances
+        let agentStatusChart = null;
+        let systemMetricsChart = null;
+
+        // Fetch and render System Overview
+        async function loadSystemOverview() {
+            const el = document.getElementById('system-overview');
+            const loader = document.getElementById('system-overview-loader');
+            try {
+                const res = await fetch('/api/system');
+                const data = await res.json();
+                if (loader) loader.style.display = 'none';
+                if (!data || !data.system_overview) {
+                    el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">System overview data not available.</div>';
+                    showToast('warning', 'No Data', 'System overview is currently unavailable', 4000);
+                    return;
                 }
-                
-                // Dashboard Memory Chart
-                const dashboardMemoryCtx = document.getElementById('dashboard-memory-chart');
-                if (dashboardMemoryCtx) {
-                    dashboardCharts.memory = new Chart(dashboardMemoryCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Memory',
-                                data: [],
-                                borderColor: '#8b5cf6',
-                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: miniChartOptions
-                    });
-                }
-                
-                // Dashboard Disk Chart
-                const dashboardDiskCtx = document.getElementById('dashboard-disk-chart');
-                if (dashboardDiskCtx) {
-                    dashboardCharts.disk = new Chart(dashboardDiskCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Disk',
-                                data: [],
-                                borderColor: '#f59e0b',
-                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: miniChartOptions
-                    });
-                }
-                
-                // Dashboard Load Chart
-                const dashboardLoadCtx = document.getElementById('dashboard-load-chart');
-                if (dashboardLoadCtx) {
-                    dashboardCharts.load = new Chart(dashboardLoadCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Load',
-                                data: [],
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: miniChartOptions
-                    });
-                }
-            }
-            
-            // Update dashboard mini charts
-            function updateDashboardCharts(metrics) {
-                const now = new Date().toLocaleTimeString();
-                
-                // Update CPU
-                if (dashboardCharts.cpu && metrics.cpu && metrics.cpu.usage_percent !== undefined) {
-                    const cpuUsage = metrics.cpu.usage_percent;
-                    dashboardCharts.cpu.data.labels.push(now);
-                    dashboardCharts.cpu.data.datasets[0].data.push(cpuUsage);
-                    
-                    if (dashboardCharts.cpu.data.labels.length > 10) {
-                        dashboardCharts.cpu.data.labels.shift();
-                        dashboardCharts.cpu.data.datasets[0].data.shift();
-                    }
-                    
-                    dashboardCharts.cpu.update('none');
-                    document.getElementById('dashboard-cpu').textContent = cpuUsage.toFixed(1) + '%';
-                }
-                
-                // Update Memory
-                if (dashboardCharts.memory && metrics.memory && metrics.memory.usage_percent !== undefined) {
-                    const memUsage = metrics.memory.usage_percent;
-                    dashboardCharts.memory.data.labels.push(now);
-                    dashboardCharts.memory.data.datasets[0].data.push(memUsage);
-                    
-                    if (dashboardCharts.memory.data.labels.length > 10) {
-                        dashboardCharts.memory.data.labels.shift();
-                        dashboardCharts.memory.data.datasets[0].data.shift();
-                    }
-                    
-                    dashboardCharts.memory.update('none');
-                    document.getElementById('dashboard-memory').textContent = memUsage.toFixed(1) + '%';
-                }
-                
-                // Update Disk
-                if (dashboardCharts.disk && metrics.disk) {
-                    const diskData = Object.values(metrics.disk)[0];
-                    if (diskData && diskData.usage_percent !== undefined) {
-                        const diskUsage = diskData.usage_percent;
-                        dashboardCharts.disk.data.labels.push(now);
-                        dashboardCharts.disk.data.datasets[0].data.push(diskUsage);
-                        
-                        if (dashboardCharts.disk.data.labels.length > 10) {
-                            dashboardCharts.disk.data.labels.shift();
-                            dashboardCharts.disk.data.datasets[0].data.shift();
-                        }
-                        
-                        dashboardCharts.disk.update('none');
-                        document.getElementById('dashboard-disk').textContent = diskUsage.toFixed(1) + '%';
-                    }
-                }
-                
-                // Update Load
-                if (dashboardCharts.load && metrics.performance && metrics.performance.system_load_score !== undefined) {
-                    const loadScore = metrics.performance.system_load_score;
-                    dashboardCharts.load.data.labels.push(now);
-                    dashboardCharts.load.data.datasets[0].data.push(loadScore);
-                    
-                    if (dashboardCharts.load.data.labels.length > 10) {
-                        dashboardCharts.load.data.labels.shift();
-                        dashboardCharts.load.data.datasets[0].data.shift();
-                    }
-                    
-                    dashboardCharts.load.update('none');
-                    document.getElementById('dashboard-load').textContent = loadScore.toFixed(1) + '%';
-                }
-            }
-            
-            // Helper functions
-            function formatUptime(seconds) {
-                if (!seconds || isNaN(seconds)) return '--';
-                let s = Math.floor(seconds);
-                let m = Math.floor(s / 60); s = s % 60;
-                let h = Math.floor(m / 60); m = m % 60;
-                let d = Math.floor(h / 24); h = h % 24;
-                let str = '';
-                if (d > 0) str += d + 'd ';
-                if (h > 0) str += h + 'h ';
-                if (m > 0) str += m + 'm ';
-                str += s + 's';
-                return str;
-            }
-            
-            function formatBytes(bytes) {
-                if (!bytes || isNaN(bytes)) return '--';
-                if (bytes < 1024) return bytes + ' B';
-                let kb = bytes / 1024;
-                if (kb < 1024) return kb.toFixed(1) + ' KB';
-                let mb = kb / 1024;
-                if (mb < 1024) return mb.toFixed(1) + ' MB';
-                let gb = mb / 1024;
-                return gb.toFixed(2) + ' GB';
-            }
-            
-            // Chart instances for metrics section
-            let charts = {};
-            let autoRefresh = true;
-            let refreshInterval;
-            
-            // Initialize charts for metrics section
-            function initializeCharts() {
-                const chartOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 750,
-                        easing: 'easeInOutQuart'
-                    },
-                    scales: {
-                        x: {
-                            display: true,
-                            grid: {
-                                color: 'rgba(255,255,255,0.1)'
-                            },
-                            ticks: {
-                                color: '#a0aec0',
-                                maxTicksLimit: 8
-                            }
-                        },
-                        y: {
-                            display: true,
-                            grid: {
-                                color: 'rgba(255,255,255,0.1)'
-                            },
-                            ticks: {
-                                color: '#a0aec0',
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            },
-                            min: 0,
-                            max: 100
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    elements: {
-                        point: {
-                            radius: 0
-                        },
-                        line: {
-                            tension: 0.4
-                        }
-                    }
-                };
-                
-                // CPU Chart
-                const cpuCtx = document.getElementById('cpu-chart');
-                if (cpuCtx) {
-                    charts.cpu = new Chart(cpuCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'CPU Usage',
-                                data: [],
-                                borderColor: '#6366f1',
-                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: chartOptions
-                    });
-                }
-                
-                // Memory Chart
-                const memoryCtx = document.getElementById('memory-chart');
-                if (memoryCtx) {
-                    charts.memory = new Chart(memoryCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Memory Usage',
-                                data: [],
-                                borderColor: '#8b5cf6',
-                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: chartOptions
-                    });
-                }
-                
-                // Disk Chart
-                const diskCtx = document.getElementById('disk-chart');
-                if (diskCtx) {
-                    charts.disk = new Chart(diskCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Disk Usage',
-                                data: [],
-                                borderColor: '#f59e0b',
-                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: chartOptions
-                    });
-                }
-                
-                // Load Chart
-                const loadCtx = document.getElementById('load-chart');
-                if (loadCtx) {
-                    charts.load = new Chart(loadCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'System Load',
-                                data: [],
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                borderWidth: 2,
-                                fill: true
-                            }]
-                        },
-                        options: chartOptions
-                    });
-                }
-                
-                // Network Chart
-                const networkCtx = document.getElementById('network-chart');
-                if (networkCtx) {
-                    charts.network = new Chart(networkCtx, {
-                        type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                label: 'Network In',
-                                data: [],
-                                borderColor: '#3b82f6',
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                borderWidth: 2,
-                                fill: false
-                            }, {
-                                label: 'Network Out',
-                                data: [],
-                                borderColor: '#ef4444',
-                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                borderWidth: 2,
-                                fill: false
-                            }]
-                        },
-                        options: {
-                            ...chartOptions,
-                            scales: {
-                                ...chartOptions.scales,
-                                y: {
-                                    ...chartOptions.scales.y,
-                                    ticks: {
-                                        color: '#a0aec0',
-                                        callback: function(value) {
-                                            return formatBytes(value);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Update charts with new data
-            function updateCharts(metrics) {
-                const now = new Date().toLocaleTimeString();
-                
-                // Update CPU chart
-                if (charts.cpu && metrics.cpu && metrics.cpu.usage_percent !== undefined) {
-                    const cpuUsage = metrics.cpu.usage_percent;
-                    charts.cpu.data.labels.push(now);
-                    charts.cpu.data.datasets[0].data.push(cpuUsage);
-                    
-                    // Keep only last 20 data points
-                    if (charts.cpu.data.labels.length > 20) {
-                        charts.cpu.data.labels.shift();
-                        charts.cpu.data.datasets[0].data.shift();
-                    }
-                    
-                    charts.cpu.update('none');
-                    document.getElementById('cpu-value').textContent = cpuUsage.toFixed(1) + '%';
-                }
-                
-                // Update Memory chart
-                if (charts.memory && metrics.memory && metrics.memory.usage_percent !== undefined) {
-                    const memUsage = metrics.memory.usage_percent;
-                    charts.memory.data.labels.push(now);
-                    charts.memory.data.datasets[0].data.push(memUsage);
-                    
-                    if (charts.memory.data.labels.length > 20) {
-                        charts.memory.data.labels.shift();
-                        charts.memory.data.datasets[0].data.shift();
-                    }
-                    
-                    charts.memory.update('none');
-                    document.getElementById('memory-value').textContent = memUsage.toFixed(1) + '%';
-                }
-                
-                // Update Disk chart (use first disk found)
-                if (charts.disk && metrics.disk) {
-                    const diskData = Object.values(metrics.disk)[0];
-                    if (diskData && diskData.usage_percent !== undefined) {
-                        const diskUsage = diskData.usage_percent;
-                        charts.disk.data.labels.push(now);
-                        charts.disk.data.datasets[0].data.push(diskUsage);
-                        
-                        if (charts.disk.data.labels.length > 20) {
-                            charts.disk.data.labels.shift();
-                            charts.disk.data.datasets[0].data.shift();
-                        }
-                        
-                        charts.disk.update('none');
-                        document.getElementById('disk-value').textContent = diskUsage.toFixed(1) + '%';
-                    }
-                }
-                
-                // Update Load chart
-                if (charts.load && metrics.performance && metrics.performance.system_load_score !== undefined) {
-                    const loadScore = metrics.performance.system_load_score;
-                    charts.load.data.labels.push(now);
-                    charts.load.data.datasets[0].data.push(loadScore);
-                    
-                    if (charts.load.data.labels.length > 20) {
-                        charts.load.data.labels.shift();
-                        charts.load.data.datasets[0].data.shift();
-                    }
-                    
-                    charts.load.update('none');
-                    document.getElementById('load-value').textContent = loadScore.toFixed(1) + '%';
-                }
-                
-                // Update Network chart
-                if (charts.network && metrics.network) {
-                    const netData = Object.values(metrics.network)[0];
-                    if (netData && netData.bytes_recv !== undefined && netData.bytes_sent !== undefined) {
-                        charts.network.data.labels.push(now);
-                        charts.network.data.datasets[0].data.push(netData.bytes_recv);
-                        charts.network.data.datasets[1].data.push(netData.bytes_sent);
-                        
-                        if (charts.network.data.labels.length > 20) {
-                            charts.network.data.labels.shift();
-                            charts.network.data.datasets[0].data.shift();
-                            charts.network.data.datasets[1].data.shift();
-                        }
-                        
-                        charts.network.update('none');
-                        document.getElementById('network-value').textContent = formatBytes(netData.bytes_recv);
-                    }
-                }
-            }
-            
-            // Update system info
-            function updateSystemInfo(metrics) {
-                const infoContainer = document.getElementById('system-info');
-                if (!infoContainer || !metrics.system_info) return;
-                
-                const info = metrics.system_info;
-                infoContainer.innerHTML = `
-                    <div class='info-item'>
-                        <span class='info-label'>Platform:</span>
-                        <span class='info-value'>${info.platform || 'Unknown'}</span>
+                let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">';
+                const overview = data.system_overview;
+                html += `
+                    <div class="metric-card">
+                        <div class="metric-value">${overview.cpu_usage?.toFixed(1) || 'N/A'}%</div>
+                        <div class="metric-label">CPU Usage</div>
                     </div>
-                    <div class='info-item'>
-                        <span class='info-label'>Hostname:</span>
-                        <span class='info-value'>${info.hostname || 'Unknown'}</span>
+                    <div class="metric-card">
+                        <div class="metric-value">${overview.memory_usage?.toFixed(1) || 'N/A'}%</div>
+                        <div class="metric-label">Memory Usage</div>
                     </div>
-                    <div class='info-item'>
-                        <span class='info-label'>Architecture:</span>
-                        <span class='info-value'>${info.architecture || 'Unknown'}</span>
+                    <div class="metric-card">
+                        <div class="metric-value">${overview.running_agents || 0}/${overview.total_agents || 0}</div>
+                        <div class="metric-label">Agents Running</div>
                     </div>
-                    <div class='info-item'>
-                        <span class='info-label'>Processor:</span>
-                        <span class='info-value'>${info.processor || 'Unknown'}</span>
-                    </div>
-                    <div class='info-item'>
-                        <span class='info-label'>Uptime:</span>
-                        <span class='info-value'>${formatUptime(info.uptime || 0)}</span>
-                    </div>
-                    <div class='info-item'>
-                        <span class='info-label'>Last Update:</span>
-                        <span class='info-value'>${metrics.timestamp ? new Date(metrics.timestamp).toLocaleTimeString() : 'Unknown'}</span>
+                    <div class="metric-card">
+                        <div class="metric-value">${data.active_issues?.length || 0}</div>
+                        <div class="metric-label">Active Issues</div>
                     </div>
                 `;
+                html += '</div>';
+                el.innerHTML = html;
+            } catch (e) {
+                if (loader) loader.textContent = 'Failed to load system overview.';
+                el.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load system overview</div>';
+                showToast('danger', 'Error', 'Failed to load system overview', 5000);
             }
-            
-            // Toggle auto-refresh
-            function toggleAutoRefresh() {
-                autoRefresh = !autoRefresh;
-                const indicator = document.getElementById('refresh-indicator');
-                indicator.textContent = `Auto-refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+        }
+
+        // Fetch and render System Health
+        async function loadSystemHealth() {
+            const el = document.getElementById('system-health');
+            const loader = document.getElementById('system-health-loader');
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                if (loader) loader.style.display = 'none';
                 
-                if (autoRefresh) {
-                    startAutoRefresh();
-                } else {
-                    stopAutoRefresh();
+                const statusClass = data.status === 'healthy' ? 'status-healthy' : 'status-critical';
+                const statusText = data.status === 'healthy' ? 'Healthy' : 'Unhealthy';
+                
+                el.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;">
+                        <div class="metric-card">
+                            <div class="metric-value">
+                                <span class="status-indicator ${statusClass}"></span>${statusText}
+                            </div>
+                            <div class="metric-label">System Status</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${data.agents_running || 0}</div>
+                            <div class="metric-label">Agents Running</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${data.system_health || 'Unknown'}</div>
+                            <div class="metric-label">Health Score</div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                if (loader) loader.textContent = 'Failed to load system health.';
+                showToast('danger', 'Error', 'Failed to load system health', 5000);
+            }
+        }
+
+        // Fetch and render Agent Status
+        async function loadAgentStatus() {
+            const el = document.getElementById('agent-status');
+            const loader = document.getElementById('agent-status-loader');
+            try {
+                const res = await fetch('/api/agents');
+                const data = await res.json();
+                if (loader) loader.style.display = 'none';
+                if (!data || Object.keys(data).length === 0) {
+                    el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No agent status data available.</div>';
+                    showToast('warning', 'No Data', 'Agent status is currently unavailable', 4000);
+                    return;
                 }
-            }
-            
-            // Start auto-refresh
-            function startAutoRefresh() {
-                if (refreshInterval) clearInterval(refreshInterval);
-                refreshInterval = setInterval(loadMetricsData, 2000);
-            }
-            
-            // Stop auto-refresh
-            function stopAutoRefresh() {
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                    refreshInterval = null;
+                let html = '<table style="width:100%;border-collapse:collapse;font-size:1rem;">';
+                html += '<thead><tr><th style="text-align:left;padding:0.5rem;">Agent</th><th>Status</th><th>Health</th><th>Uptime</th><th>Checks</th><th>Errors</th><th>Actions</th></tr></thead><tbody>';
+                const chartData = {names:[], health:[]};
+                for(const [name, agent] of Object.entries(data)) {
+                    const statusClass = agent.health === 'healthy' ? 'status-healthy' : 
+                                      agent.health === 'warning' ? 'status-warning' : 'status-critical';
+                    const statusText = agent.health === 'healthy' ? 'Healthy' : 
+                                     agent.health === 'warning' ? 'Warning' : 'Critical';
+                    html += `
+                        <tr>
+                            <td style="padding:0.5rem;font-weight:600;">${name}</td>
+                            <td><span class="status-indicator ${agent.status ? 'status-healthy' : 'status-critical'}"></span>${agent.status ? 'Running' : 'Stopped'}</td>
+                            <td><span class="status-indicator ${statusClass}"></span>${statusText}</td>
+                            <td>${(agent.uptime/60).toFixed(1)} min</td>
+                            <td>${agent.check_count}</td>
+                            <td>${agent.error_count}</td>
+                            <td>
+                                <button class="btn" style="padding:0.3rem 0.6rem;font-size:0.8rem;" onclick="sendCommand('restart', '${name}')" aria-label="Restart ${name}">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    chartData.names.push(name);
+                    chartData.health.push(agent.health === 'healthy' ? 1 : agent.health === 'warning' ? 0.5 : 0);
                 }
-            }
-            
-            // Load metrics data
-            async function loadMetricsData() {
-                try {
-                    const response = await fetch('/api/metrics');
-                    const metrics = await response.json();
-                    
-                    if (metrics && typeof metrics === 'object' && !metrics.error) {
-                        updateCharts(metrics);
-                        updateSystemInfo(metrics);
-                    } else {
-                        console.error('No metrics available:', metrics.error || 'Metrics not collected yet');
+                html += '</tbody></table>';
+                el.innerHTML = html;
+                // Render ECharts bar chart for agent health
+                const chartEl = document.getElementById('agent-status-chart');
+                if(chartEl) {
+                    if (!agentStatusChart) {
+                        agentStatusChart = echarts.init(chartEl);
                     }
-                } catch (error) {
-                    console.error('Failed to load metrics:', error);
+                    agentStatusChart.setOption({
+                        title: {text: 'Agent Health Overview', left: 'center', textStyle:{fontWeight:'bold',fontSize:18}},
+                        tooltip: {},
+                        xAxis: {type: 'category', data: chartData.names},
+                        yAxis: {type: 'value', min:0, max:1, axisLabel:{formatter:v=>v===1?'Healthy':v===0.5?'Warning':'Critical'}},
+                        series: [{
+                            name: 'Health',
+                            type: 'bar',
+                            data: chartData.health,
+                            itemStyle: {
+                                color: function(params) {
+                                    if(params.value === 1) return '#10b981';
+                                    if(params.value === 0.5) return '#f59e0b';
+                                    return '#ef4444';
+                                }
+                            },
+                            barWidth: '40%'
+                        }]
+                    });
+                }
+            } catch (e) {
+                if (loader) loader.textContent = 'Failed to load agent status.';
+                el.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load agent status</div>';
+                showToast('danger', 'Error', 'Failed to load agent status', 5000);
+            }
+        }
+
+        // Fetch and render Live Alerts
+        async function loadLiveAlerts() {
+            const el = document.getElementById('live-alerts');
+            const loader = document.getElementById('live-alerts-loader');
+            try {
+                const res = await fetch('/api/alerts/live');
+                const data = await res.json();
+                if (loader) loader.style.display = 'none';
+                if (!Array.isArray(data) || data.length === 0) {
+                    el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No recent alerts. System is running smoothly! 🎉</div>';
+                    showToast('info', 'No Alerts', 'No recent alerts found', 3000);
+                    return;
+                }
+                let html = '<ul style="list-style:none;padding:0;margin:0;">';
+                for(const alert of data.slice(-10)) {
+                    const severityColor = alert.severity === 'CRITICAL' ? '#ef4444' : 
+                                        alert.severity === 'ERROR' ? '#f59e0b' : '#4f8cff';
+                    html += `
+                        <li style="margin-bottom:0.7rem;padding:0.5rem;background:rgba(255,255,255,0.1);border-radius:8px;">
+                            <span style="font-weight:bold;">${alert.emoji||''} ${alert.agent}</span> 
+                            <span style="color:${severityColor};font-weight:600;">[${alert.severity}]</span> 
+                            <span style="font-size:0.95em;">${alert.message}</span> 
+                            <span style="color:#888;font-size:0.9em;">(${alert.timestamp})</span>
+                        </li>
+                    `;
+                }
+                html += '</ul>';
+                el.innerHTML = html;
+            } catch (e) {
+                if (loader) loader.textContent = 'Failed to load alerts.';
+                el.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load alerts</div>';
+                showToast('danger', 'Error', 'Failed to load alerts', 5000);
+            }
+        }
+
+        // Fetch and render Activity Feed
+        async function loadActivityFeed() {
+            const el = document.getElementById('activity-feed');
+            const loader = document.getElementById('activity-feed-loader');
+            try {
+                const res = await fetch('/api/activity');
+                const data = await res.json();
+                if (loader) loader.style.display = 'none';
+                
+                if(Array.isArray(data) && data.length) {
+                    let html = '<ul style="list-style:none;padding:0;margin:0;">';
+                    for(const activity of data.slice(-10)) {
+                        html += `
+                            <li style="margin-bottom:0.7rem;padding:0.5rem;background:rgba(255,255,255,0.1);border-radius:8px;">
+                                <span style="font-weight:600;">${activity.description || 'System activity'}</span>
+                                <span style="color:#888;font-size:0.9em;display:block;">${activity.timestamp || 'Unknown time'}</span>
+                            </li>
+                        `;
+                    }
+                    html += '</ul>';
+                    el.innerHTML = html;
+                } else {
+                    el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No recent activity.</div>';
+                }
+            } catch (e) {
+                if (loader) loader.textContent = 'Failed to load activity feed.';
+                showToast('danger', 'Error', 'Failed to load activity feed', 5000);
+            }
+        }
+
+        // Load system metrics chart
+        async function loadSystemMetricsChart() {
+            try {
+                const res = await fetch('/api/metrics');
+                const data = await res.json();
+                const chartEl = document.getElementById('system-metrics-chart');
+                if(chartEl && data) {
+                    if (!systemMetricsChart) {
+                        systemMetricsChart = echarts.init(chartEl);
+                    }
+                    systemMetricsChart.setOption({
+                        title: {text: 'System Performance Metrics', left: 'center', textStyle:{fontWeight:'bold',fontSize:18}},
+                        tooltip: {trigger: 'axis'},
+                        legend: {data: ['CPU Usage', 'Memory Usage'], top: 30},
+                        xAxis: {type: 'category', data: ['Current']},
+                        yAxis: {type: 'value', min: 0, max: 100, axisLabel: {formatter: '{value}%'}},
+                        series: [
+                            {
+                                name: 'CPU Usage',
+                                type: 'line',
+                                data: [data.cpu?.usage_percent || 0],
+                                smooth: true,
+                                lineStyle: {color: '#4f8cff'},
+                                itemStyle: {color: '#4f8cff'}
+                            },
+                            {
+                                name: 'Memory Usage',
+                                type: 'line',
+                                data: [data.memory?.usage_percent || 0],
+                                smooth: true,
+                                lineStyle: {color: '#10b981'},
+                                itemStyle: {color: '#10b981'}
+                            }
+                        ]
+                    });
+                } else if (chartEl) {
+                    chartEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No system metrics data available.</div>';
+                    showToast('warning', 'No Data', 'System metrics are currently unavailable', 4000);
+                }
+            } catch (e) {
+                const chartEl = document.getElementById('system-metrics-chart');
+                if (chartEl) chartEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load system metrics</div>';
+                showToast('danger', 'Error', 'Failed to load system metrics', 5000);
+            }
+        }
+
+        // Logs Viewer Functions
+        let logsInterval = null;
+        let currentLogLevel = 'all';
+
+        async function loadLogs() {
+            const el = document.getElementById('logs-content');
+            const container = document.getElementById('logs-container');
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                
+                if (data.logs && Array.isArray(data.logs)) {
+                    let html = '';
+                    const filteredLogs = data.logs.filter(log => 
+                        currentLogLevel === 'all' || log.level === currentLogLevel
+                    );
+                    
+                    for (const log of filteredLogs.slice(-100)) {
+                        const levelColor = log.level === 'CRITICAL' ? '#ef4444' : 
+                                         log.level === 'ERROR' ? '#f59e0b' : 
+                                         log.level === 'WARNING' ? '#fbbf24' : '#4f8cff';
+                        html += `<div style="margin-bottom:0.3rem;color:${levelColor};font-weight:600;">[${log.timestamp}] ${log.level}</div>`;
+                        html += `<div style="margin-bottom:0.5rem;color:var(--secondary);">${log.message}</div>`;
+                    }
+                    el.innerHTML = html;
+                    
+                    // Auto-scroll to bottom if enabled
+                    if (document.getElementById('auto-scroll-logs').checked) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } else {
+                    el.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">No logs available</div>';
+                }
+            } catch (e) {
+                el.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load logs</div>';
+                showToast('danger', 'Error', 'Failed to load logs', 5000);
+            }
+        }
+
+        function refreshLogs() {
+            loadLogs();
+            showToast('info', 'Logs Refreshed', 'Log data has been updated', 2000);
+        }
+
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear the logs? This action cannot be undone.')) {
+                document.getElementById('logs-content').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Logs cleared</div>';
+                showToast('warning', 'Logs Cleared', 'Log display has been cleared', 3000);
+            }
+        }
+
+        // Configuration Management Functions
+        async function loadConfiguration() {
+            const el = document.getElementById('current-config');
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                
+                // Populate form fields
+                if (data.thresholds) {
+                    document.getElementById('cpu-warning').value = data.thresholds.cpu_warning || 75;
+                    document.getElementById('cpu-critical').value = data.thresholds.cpu_critical || 90;
+                    document.getElementById('memory-warning').value = data.thresholds.memory_warning || 85;
+                    document.getElementById('memory-critical').value = data.thresholds.memory_critical || 95;
+                    document.getElementById('disk-warning').value = data.thresholds.disk_warning || 85;
+                    document.getElementById('disk-critical').value = data.thresholds.disk_critical || 95;
+                }
+                
+                if (data.agent_config) {
+                    const sensorConfig = data.agent_config.get('sensor', {});
+                    document.getElementById('check-interval').value = sensorConfig.check_interval || 30;
+                }
+                
+                if (data.logging) {
+                    document.getElementById('log-level').value = data.logging.log_level || 'INFO';
+                }
+                
+                if (data.web_interface) {
+                    document.getElementById('web-port').value = data.web_interface.port || 8000;
+                }
+                
+                if (data.ollama) {
+                    document.getElementById('ollama-url').value = data.ollama.url || 'http://localhost:11434';
+                    document.getElementById('ollama-model').value = data.ollama.model || 'mistral';
+                }
+                
+                document.getElementById('persistence-enabled').checked = data.persistence_enabled !== false;
+                
+                // Display current configuration
+                el.innerHTML = `<pre style="margin:0;white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (e) {
+                el.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load configuration</div>';
+                showToast('danger', 'Error', 'Failed to load configuration', 5000);
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const configData = {
+                    thresholds: {
+                        cpu_warning: parseFloat(document.getElementById('cpu-warning').value),
+                        cpu_critical: parseFloat(document.getElementById('cpu-critical').value),
+                        memory_warning: parseFloat(document.getElementById('memory-warning').value),
+                        memory_critical: parseFloat(document.getElementById('memory-critical').value),
+                        disk_warning: parseFloat(document.getElementById('disk-warning').value),
+                        disk_critical: parseFloat(document.getElementById('disk-critical').value)
+                    },
+                    agent_config: {
+                        sensor: {
+                            check_interval: parseInt(document.getElementById('check-interval').value)
+                        }
+                    },
+                    logging: {
+                        log_level: document.getElementById('log-level').value
+                    },
+                    web_interface: {
+                        port: parseInt(document.getElementById('web-port').value)
+                    },
+                    ollama: {
+                        url: document.getElementById('ollama-url').value,
+                        model: document.getElementById('ollama-model').value
+                    },
+                    persistence_enabled: document.getElementById('persistence-enabled').checked
+                };
+                
+                const res = await fetch('/api/config/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(configData)
+                });
+                
+                const result = await res.json();
+                if (result.status === 'success') {
+                    showToast('success', 'Configuration Saved', 'Settings have been updated successfully', 3000);
+                    loadConfiguration(); // Refresh display
+                } else {
+                    throw new Error(result.message || 'Failed to save configuration');
+                }
+            } catch (e) {
+                showToast('danger', 'Save Failed', `Failed to save configuration: ${e.message}`, 5000);
+            }
+        }
+
+        function resetConfig() {
+            if (confirm('Are you sure you want to reset all configuration to default values?')) {
+                loadConfiguration(); // Reload original values
+                showToast('warning', 'Configuration Reset', 'All settings have been reset to defaults', 3000);
+            }
+        }
+
+        function exportConfig() {
+            try {
+                const configData = {
+                    thresholds: {
+                        cpu_warning: parseFloat(document.getElementById('cpu-warning').value),
+                        cpu_critical: parseFloat(document.getElementById('cpu-critical').value),
+                        memory_warning: parseFloat(document.getElementById('memory-warning').value),
+                        memory_critical: parseFloat(document.getElementById('memory-critical').value),
+                        disk_warning: parseFloat(document.getElementById('disk-warning').value),
+                        disk_critical: parseFloat(document.getElementById('disk-critical').value)
+                    },
+                    agent_config: {
+                        sensor: {
+                            check_interval: parseInt(document.getElementById('check-interval').value)
+                        }
+                    },
+                    logging: {
+                        log_level: document.getElementById('log-level').value
+                    },
+                    web_interface: {
+                        port: parseInt(document.getElementById('web-port').value)
+                    },
+                    ollama: {
+                        url: document.getElementById('ollama-url').value,
+                        model: document.getElementById('ollama-model').value
+                    },
+                    persistence_enabled: document.getElementById('persistence-enabled').checked,
+                    exported_at: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `agent-system-config-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('success', 'Configuration Exported', 'Configuration has been downloaded', 3000);
+            } catch (e) {
+                showToast('danger', 'Export Failed', `Failed to export configuration: ${e.message}`, 5000);
+            }
+        }
+
+        // Event listeners for logs and config
+        document.getElementById('log-level-filter').addEventListener('change', function() {
+            currentLogLevel = this.value;
+            loadLogs();
+        });
+
+        // Initial load
+        loadSystemOverview();
+        loadSystemHealth();
+        loadAgentStatus();
+        loadLiveAlerts();
+        loadActivityFeed();
+        loadSystemMetricsChart();
+        loadLogs();
+        loadConfiguration();
+
+        // Auto-refresh
+        setInterval(loadSystemOverview, 30000);
+        setInterval(loadSystemHealth, 30000);
+        setInterval(loadAgentStatus, 30000);
+        setInterval(loadLiveAlerts, 15000);
+        setInterval(loadActivityFeed, 30000);
+        setInterval(loadSystemMetricsChart, 60000);
+        setInterval(loadLogs, 10000); // Refresh logs every 10 seconds
+
+        // Show welcome toast
+        setTimeout(() => {
+            showToast('success', 'Dashboard Loaded', 'Welcome to the AI Agent System Dashboard!', 3000);
+        }, 1000);
+
+        // Nav bar smooth scroll and active link
+        document.querySelectorAll('nav ul li a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({behavior: 'smooth', block: 'start'});
+                        // Update active class
+                        document.querySelectorAll('nav ul li a').forEach(l => l.classList.remove('active'));
+                        this.classList.add('active');
+                    }
+                }
+            });
+        });
+        // Scrollspy: highlight nav link on scroll
+        const sectionIds = ['#dashboard', '#agents', '#alerts', '#logs', '#settings'];
+        window.addEventListener('scroll', () => {
+            let current = sectionIds[0];
+            for (const id of sectionIds) {
+                const section = document.querySelector(id);
+                if (section && section.getBoundingClientRect().top <= 80) {
+                    current = id;
                 }
             }
-            
-            // Initialize when metrics section is shown
-            let metricsInitialized = false;
-            const originalLoadSectionData = loadSectionData;
-            loadSectionData = function(section) {
-                originalLoadSectionData(section);
-                
-                if (section === 'metrics' && !metricsInitialized) {
-                    setTimeout(() => {
-                        initializeCharts();
-                        loadMetricsData();
-                        startAutoRefresh();
-                        metricsInitialized = true;
-                    }, 100);
-                } else if (section !== 'metrics' && metricsInitialized) {
-                    stopAutoRefresh();
-                }
-            };
+            document.querySelectorAll('nav ul li a').forEach(link => {
+                link.classList.toggle('active', link.getAttribute('href') === current);
+            });
+        });
         </script>
     </body>
     </html>
@@ -1563,17 +1566,87 @@ async def root():
 
 @app.get("/api/system")
 async def get_system_info():
-    """Get comprehensive system information."""
+    """Get comprehensive system information with caching."""
     try:
-        return orchestrator.get_system_info()
+        # Check cache first
+        cached_data = get_cached_data("system_info", max_age=15)  # 15 second cache
+        if cached_data:
+            return cached_data
+        
+        info = orchestrator.get_system_info()
+        
+        # Compose system_overview for the dashboard with fallback values
+        system_overview = {
+            "cpu_usage": 0,
+            "memory_usage": 0,
+            "running_agents": info.get("running_agents", 0),
+            "total_agents": info.get("total_agents", 0),
+        }
+        
+        # Try to get metrics from sensor agent if available
+        try:
+            sensor_agent = orchestrator.agents.get("sensor")
+            if sensor_agent and hasattr(sensor_agent, "get_current_metrics"):
+                latest_metrics = sensor_agent.get_current_metrics()
+                if latest_metrics:
+                    cpu_usage = latest_metrics.get("cpu", {}).get("usage_percent")
+                    memory_usage = latest_metrics.get("memory", {}).get("usage_percent")
+                    if cpu_usage is not None:
+                        system_overview["cpu_usage"] = cpu_usage
+                    if memory_usage is not None:
+                        system_overview["memory_usage"] = memory_usage
+        except Exception as e:
+            # Log but don't fail the entire endpoint
+            print(f"Warning: Could not get sensor metrics: {e}")
+        
+        # Add active issues if available from analyzer
+        active_issues = []
+        try:
+            analyzer_agent = orchestrator.agents.get("analyzer")
+            if analyzer_agent and hasattr(analyzer_agent, "get_analysis_summary"):
+                summary = analyzer_agent.get_analysis_summary()
+                if summary and isinstance(summary, dict):
+                    issues = summary.get("latest_analysis", {}).get("issues_detected")
+                    if isinstance(issues, list):
+                        active_issues = issues
+                    elif isinstance(issues, int):
+                        active_issues = [f"{issues} issues detected"]
+        except Exception as e:
+            # Log but don't fail the entire endpoint
+            print(f"Warning: Could not get analyzer issues: {e}")
+        
+        info["system_overview"] = system_overview
+        info["active_issues"] = active_issues
+        info["cached_at"] = time.time()
+        
+        # Cache the result
+        performance_cache["system_info"] = info
+        
+        return info
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return a minimal response instead of 500 error
+        return {
+            "system_overview": {
+                "cpu_usage": 0,
+                "memory_usage": 0,
+                "running_agents": 0,
+                "total_agents": 0,
+            },
+            "active_issues": [],
+            "error": f"System information temporarily unavailable: {str(e)}",
+            "cached_at": time.time()
+        }
 
 
 @app.get("/api/agents")
 async def get_agents():
-    """Get status of all agents."""
+    """Get status of all agents with caching."""
     try:
+        # Check cache first
+        cached_data = get_cached_data("agents_status", max_age=10)  # 10 second cache
+        if cached_data:
+            return cached_data
+        
         agents = {}
         for agent_name, agent in orchestrator.agents.items():
             stats = orchestrator.get_agent_stats(agent_name)
@@ -1585,46 +1658,104 @@ async def get_agents():
                     "check_count": stats.get("check_count", 0),
                     "error_count": stats.get("error_count", 0),
                 }
+        
+        # Cache the result
+        performance_cache["agents_status"] = {
+            **agents,
+            "cached_at": time.time()
+        }
+        
         return agents
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/agent/{agent_name}")
-async def get_agent_details(agent_name: str):
-    """Get detailed information about a specific agent."""
-    try:
-        stats = orchestrator.get_agent_stats(agent_name)
-        if not stats:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/metrics")
 async def get_current_metrics():
-    """Get current system metrics."""
+    """Get current system metrics with caching."""
     try:
+        # Check cache first
+        cached_data = get_cached_data("current_metrics", max_age=5)  # 5 second cache
+        if cached_data:
+            return cached_data
+        
         # Get metrics from sensor agent if available
         sensor_agent = orchestrator.agents.get("sensor")
         if sensor_agent and hasattr(sensor_agent, "get_current_metrics"):
-            return sensor_agent.get_current_metrics() or {}
-        return {"error": "Metrics not available"}
+            try:
+                metrics = sensor_agent.get_current_metrics()
+                if metrics:
+                    metrics["cached_at"] = time.time()
+                    # Cache the result
+                    performance_cache["current_metrics"] = metrics
+                    return metrics
+            except Exception as e:
+                print(f"Warning: Sensor agent metrics failed: {e}")
+        
+        # Fallback to basic system metrics
+        try:
+            import psutil
+            fallback_metrics = {
+                "cpu": {"usage_percent": psutil.cpu_percent(interval=1)},
+                "memory": {"usage_percent": psutil.virtual_memory().percent},
+                "disk": {"usage_percent": psutil.disk_usage('C:\\').percent if sys.platform == 'win32' else psutil.disk_usage('/').percent},
+                "cached_at": time.time()
+            }
+        except Exception as e:
+            fallback_metrics = {
+                "cpu": {"usage_percent": 0},
+                "memory": {"usage_percent": 0},
+                "disk": {"usage_percent": 0},
+                "error": str(e),
+                "cached_at": time.time()
+            }
+        
+        performance_cache["current_metrics"] = fallback_metrics
+        return fallback_metrics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/metrics/history")
-async def get_metric_history(limit: int = 50):
-    """Get metric history."""
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint with caching."""
     try:
-        sensor_agent = orchestrator.agents.get("sensor")
-        if sensor_agent and hasattr(sensor_agent, "get_metric_history"):
-            return sensor_agent.get_metric_history(limit)
-        return {"error": "Metric history not available"}
+        # Check cache first
+        cached_data = get_cached_data("health_check", max_age=30)  # 30 second cache
+        if cached_data:
+            return cached_data
+        
+        # Get basic health data
+        try:
+            agents_running = sum(
+                1 for agent in orchestrator.agents.values() if getattr(agent, "running", False)
+            ) if hasattr(orchestrator, "agents") else 0
+        except Exception:
+            agents_running = 0
+        
+        health_data = {
+            "status": "healthy" if system_running else "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "system_health": getattr(orchestrator, "system_health", "unknown"),
+            "agents_running": agents_running,
+            "system_ready": system_ready,
+            "uptime": time.time() - startup_time if startup_time else 0,
+            "cached_at": time.time()
+        }
+        
+        # Cache the result
+        performance_cache["health_check"] = health_data
+        
+        return health_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return a basic health response even if there's an error
+        return {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "system_ready": False,
+            "agents_running": 0
+        }
 
 
 @app.get("/api/analysis")
@@ -1676,8 +1807,11 @@ async def send_command(command_data: Dict[str, Any]):
         if not command:
             raise HTTPException(status_code=400, detail="Command is required")
 
-        await orchestrator.send_command(command, target)
-        return {"status": "success", "message": f"Command '{command}' sent to {target}"}
+        result = await orchestrator.send_command(command, target)
+        if result and result.get("status") == "success":
+            return {"status": "success", "message": f"Command '{command}' sent to {target}", "result": result}
+        else:
+            return {"status": "error", "message": result.get("error", "Unknown error"), "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1713,27 +1847,57 @@ async def get_configuration():
 async def update_configuration(config_data: Dict[str, Any]):
     """Update system configuration."""
     try:
-        # This is a simplified implementation
-        # In production, you'd want more sophisticated config management
+        # Update thresholds
+        if "thresholds" in config_data:
+            thresholds = config_data["thresholds"]
+            if "cpu_warning" in thresholds:
+                config.update_threshold("cpu_warning", thresholds["cpu_warning"])
+            if "cpu_critical" in thresholds:
+                config.update_threshold("cpu_critical", thresholds["cpu_critical"])
+            if "memory_warning" in thresholds:
+                config.update_threshold("memory_warning", thresholds["memory_warning"])
+            if "memory_critical" in thresholds:
+                config.update_threshold("memory_critical", thresholds["memory_critical"])
+            if "disk_warning" in thresholds:
+                config.update_threshold("disk_warning", thresholds["disk_warning"])
+            if "disk_critical" in thresholds:
+                config.update_threshold("disk_critical", thresholds["disk_critical"])
+        
+        # Update agent configuration
+        if "agent_config" in config_data:
+            agent_config = config_data["agent_config"]
+            if "sensor" in agent_config and "check_interval" in agent_config["sensor"]:
+                sensor_config = config.get_agent_config("sensor")
+                sensor_config.check_interval = agent_config["sensor"]["check_interval"]
+        
+        # Update logging configuration
+        if "logging" in config_data:
+            logging_config = config_data["logging"]
+            if "log_level" in logging_config:
+                config.logging.log_level = logging_config["log_level"]
+        
+        # Update web interface configuration
+        if "web_interface" in config_data:
+            web_config = config_data["web_interface"]
+            if "port" in web_config:
+                config.web_port = web_config["port"]
+        
+        # Update Ollama configuration
+        if "ollama" in config_data:
+            ollama_config = config_data["ollama"]
+            if "url" in ollama_config:
+                config.ollama.url = ollama_config["url"]
+            if "model" in ollama_config:
+                config.ollama.model = ollama_config["model"]
+        
+        # Update persistence configuration
+        if "persistence_enabled" in config_data:
+            config.persistence_enabled = config_data["persistence_enabled"]
+        
         return {
             "status": "success",
-            "message": "Configuration update not implemented yet",
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint."""
-    try:
-        return {
-            "status": "healthy" if system_running else "unhealthy",
-            "timestamp": datetime.now().isoformat(),
-            "system_health": orchestrator.system_health,
-            "agents_running": sum(
-                1 for agent in orchestrator.agents.values() if agent.running
-            ),
+            "message": "Configuration updated successfully",
+            "updated_at": datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1741,14 +1905,61 @@ async def health_check():
 
 @app.get("/api/logs")
 async def get_logs(limit: int = 100):
-    """Get recent system logs."""
+    """Get recent system logs with caching and optimized parsing."""
     try:
-        # In a real implementation, you'd read from the log file
-        # For now, return a placeholder
-        return {
-            "message": "Log retrieval not implemented",
-            "log_file": config.logging.log_file,
-        }
+        # Check cache first (shorter cache for logs)
+        cached_data = get_cached_data("system_logs", max_age=5)  # 5 second cache
+        if cached_data:
+            return cached_data
+        
+        log_path = config.logging.log_file
+        logs = []
+        
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                # Read only the last N lines for performance
+                lines = f.readlines()
+                if len(lines) > limit * 2:
+                    lines = lines[-limit * 2:]  # Get more lines to filter
+            
+            # Optimized log parsing
+            log_pattern = re.compile(r"\[(.*?)\] (DEBUG|INFO|WARNING|ERROR|CRITICAL)\s+([\S]+): (.+)")
+            
+            for line in reversed(lines):
+                match = log_pattern.search(line)
+                if match:
+                    timestamp, level, agent, message = match.groups()
+                    # Extract emoji and clean agent name
+                    emoji = ""
+                    agent_name = agent
+                    if " " in agent:
+                        emoji, agent_name = agent.split(" ", 1)
+                    
+                    logs.append({
+                        "timestamp": timestamp,
+                        "level": level,
+                        "agent": agent_name,
+                        "emoji": emoji,
+                        "message": message.strip(),
+                        "raw_line": line.strip()
+                    })
+                    
+                    if len(logs) >= limit:
+                        break
+            
+            # Return in chronological order (oldest first)
+            result = {"logs": list(reversed(logs)), "cached_at": time.time()}
+            
+            # Cache the result
+            performance_cache["system_logs"] = result
+            
+            return result
+            
+        except FileNotFoundError:
+            return {"logs": [], "error": "Log file not found", "cached_at": time.time()}
+        except Exception as e:
+            return {"logs": [], "error": f"Error reading log file: {str(e)}", "cached_at": time.time()}
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1839,6 +2050,30 @@ async def get_live_alerts(limit: int = 50):
         return {"error": str(e)}
 
 
+@app.get("/api/agent/{agent_name}")
+async def get_agent_details(agent_name: str):
+    """Get detailed information about a specific agent."""
+    try:
+        stats = orchestrator.get_agent_stats(agent_name)
+        if not stats:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/metrics/history")
+async def get_metric_history(limit: int = 50):
+    """Get metric history."""
+    try:
+        sensor_agent = orchestrator.agents.get("sensor")
+        if sensor_agent and hasattr(sensor_agent, "get_metric_history"):
+            return sensor_agent.get_metric_history(limit)
+        return {"error": "Metric history not available"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Error handlers
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
@@ -1855,16 +2090,24 @@ async def internal_error_handler(request, exc):
 
 
 def start_web_interface():
-    """Start the web interface."""
-    if not config.web_interface_enabled:
-        print("Web interface is disabled in configuration")
-        return
-
-    print(f"🌐 Starting web interface on http://{config.web_host}:{config.web_port}")
-    print(f"📊 Dashboard: http://{config.web_host}:{config.web_port}/")
-    print(f"🔧 API Docs: http://{config.web_host}:{config.web_port}/docs")
-
-    uvicorn.run(app, host=config.web_host, port=config.web_port, log_level="info")
+    """Start the web interface with proper configuration."""
+    import uvicorn
+    
+    # Use config port instead of hardcoded 8002
+    port = config.web_port
+    host = config.web_host
+    
+    print(f"🌐 Starting web interface on http://{host}:{port}")
+    print(f"📊 Dashboard: http://{host}:{port}/")
+    print(f"🔧 API Docs: http://{host}:{port}/docs")
+    
+    uvicorn.run(
+        "web_interface:app",
+        host=host,
+        port=port,
+        reload=False,
+        log_level="info"
+    )
 
 
 if __name__ == "__main__":

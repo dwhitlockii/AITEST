@@ -7,6 +7,9 @@ Think of it as your network engineer with a toolkit and a mission to keep data f
 import socket
 import subprocess
 import time
+import hashlib
+import asyncio
+import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
@@ -48,6 +51,15 @@ class NetworkAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("NetworkAgent initialized - ready to monitor network performance")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _metrics_hash(self, metrics, connectivity, bandwidth):
+        import json
+        return hashlib.sha256(json.dumps({"metrics": metrics, "connectivity": connectivity, "bandwidth": bandwidth}, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform network monitoring and analysis."""
@@ -421,30 +433,36 @@ class NetworkAgent(BaseAgent):
         self, metrics: Dict[str, Any], connectivity: Dict[str, Any], bandwidth: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Analyze network performance using Ollama."""
+        # Throttle/caching logic
+        if not hasattr(self, 'analysis_cache'):
+            self.analysis_cache = {}
+        cache_ttl = 300  # 5 min
+        now = datetime.now()
+        metrics_hash = self._metrics_hash(metrics, connectivity, bandwidth)
+        cached = self.analysis_cache.get(metrics_hash)
+        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            return cached["result"]
         try:
-            # Combine all network data for analysis
             network_data = {
                 "metrics": metrics,
                 "connectivity": connectivity,
                 "bandwidth": bandwidth
             }
-            
-            # Use Ollama to analyze network performance
             analysis_result = await ollama_client.analyze_metrics(network_data, "Network performance analysis")
-            
-            return {
-                "timestamp": datetime.now().isoformat(),
+            result = {
+                "timestamp": now.isoformat(),
                 "network_score": self._calculate_network_score(metrics, connectivity, bandwidth),
                 "performance_level": analysis_result.risk_level,
                 "recommendations": analysis_result.alternatives,
                 "confidence": analysis_result.confidence,
                 "analysis": analysis_result.decision
             }
-
+            self.analysis_cache[metrics_hash] = {"result": result, "timestamp": now.isoformat()}
+            return result
         except Exception as e:
             self.logger.error(f"Failed to analyze network performance: {e}")
             return {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": now.isoformat(),
                 "network_score": self._calculate_network_score(metrics, connectivity, bandwidth),
                 "performance_level": "unknown",
                 "recommendations": [],

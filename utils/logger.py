@@ -342,6 +342,11 @@ class AgentLogger:
         """Log shutdown message."""
         self.system_shutdown(message, **kwargs)
 
+    def critical(self, message: str, **kwargs):
+        """Log critical message for this agent."""
+        emoji = system_logger._get_agent_emoji(self.agent_name)
+        self.logger.critical(f"{emoji} {self.agent_name}: CRITICAL: {message}", **kwargs)
+
 
 def create_agent_logger(agent_name: str) -> AgentLogger:
     """Factory function to create agent loggers."""

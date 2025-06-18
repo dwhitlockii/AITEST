@@ -7,6 +7,9 @@ Think of it as your auditor with a checklist and a mission to keep everything ab
 import os
 import subprocess
 import json
+import hashlib
+import asyncio
+import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
@@ -67,6 +70,14 @@ class ComplianceAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("ComplianceAgent initialized - ready to enforce policies")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _compliance_hash(self, security_checks, regulatory_checks, best_practice_checks):
+        return hashlib.sha256(json.dumps({"security": security_checks, "regulatory": regulatory_checks, "best": best_practice_checks}, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform compliance monitoring and policy checks."""
@@ -387,29 +398,35 @@ class ComplianceAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Analyze overall compliance status using Ollama."""
         try:
-            # Combine all compliance data for analysis
+            # Throttle/caching logic
+            if not hasattr(self, 'analysis_cache'):
+                self.analysis_cache = {}
+            cache_ttl = 300  # 5 min
+            now = datetime.now()
+            compliance_hash = self._compliance_hash(security_checks, regulatory_checks, best_practice_checks)
+            cached = self.analysis_cache.get(compliance_hash)
+            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+                return cached["result"]
             compliance_data = {
                 "security_checks": security_checks,
                 "regulatory_checks": regulatory_checks,
                 "best_practice_checks": best_practice_checks
             }
-            
-            # Use Ollama to analyze compliance status
-            analysis_result = await ollama_client.analyze_metrics(compliance_data, "Compliance status analysis")
-            
-            return {
-                "timestamp": datetime.now().isoformat(),
+            analysis_result = await ollama_client.analyze_metrics(compliance_data, "Compliance analysis")
+            result = {
+                "timestamp": now.isoformat(),
                 "compliance_score": self._calculate_compliance_score(security_checks, regulatory_checks, best_practice_checks),
                 "compliance_level": analysis_result.risk_level,
                 "recommendations": analysis_result.alternatives,
                 "confidence": analysis_result.confidence,
                 "analysis": analysis_result.decision
             }
-
+            self.analysis_cache[compliance_hash] = {"result": result, "timestamp": now.isoformat()}
+            return result
         except Exception as e:
             self.logger.error(f"Failed to analyze compliance status: {e}")
             return {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": now.isoformat(),
                 "compliance_score": self._calculate_compliance_score(security_checks, regulatory_checks, best_practice_checks),
                 "compliance_level": "unknown",
                 "recommendations": [],

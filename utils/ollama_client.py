@@ -6,10 +6,13 @@ This provides the same interface as GPT client but uses locally hosted models.
 import os
 import asyncio
 import json
+# NOTE: aiohttp is required for OllamaClient. Install with: pip install aiohttp
 import aiohttp
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
+import threading
+from collections import deque
 
 from config import config
 from .logger import create_agent_logger
@@ -36,10 +39,14 @@ class OllamaDecision(BaseModel):
 class OllamaClient:
     """Client for communicating with locally hosted Ollama models."""
 
+    _request_timestamps = deque(maxlen=10)  # Track last 10 requests
+    _rate_limit = 5  # Max requests per minute
+    _lock = threading.Lock()
+
     def __init__(self):
         self.base_url = getattr(config.ollama, "url", "http://localhost:11434")
-        self.default_model = getattr(config.ollama, "model", "mistral")
-        self.timeout = getattr(config.ollama, "timeout", 30)
+        self.default_model = getattr(config.ollama, "model", "mistral:latest")
+        self.timeout = getattr(config.ollama, "timeout", 60)  # Increased from 30 to 60 seconds
         self.retry_attempts = getattr(config.ollama, "retry_attempts", 3)
         self.retry_delay = getattr(config.ollama, "retry_delay", 2)
         
@@ -52,7 +59,7 @@ class OllamaClient:
         self.last_model_check = None
         self.model_check_interval = 300  # 5 minutes
 
-        logger.info(f"OllamaClient initialized with model: {self.default_model}")
+        logger.info(f"OllamaClient initialized with model: {self.default_model}, timeout: {self.timeout}s")
 
     async def _ensure_model(self):
         """Ensure the default model is available."""
@@ -68,8 +75,9 @@ class OllamaClient:
     async def _refresh_models(self):
         """Refresh the list of available models."""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.base_url}/api/tags", timeout=self.timeout) as response:
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{self.base_url}/api/tags") as response:
                     if response.status == 200:
                         data = await response.json()
                         self.available_models = [model["name"] for model in data.get("models", [])]
@@ -119,12 +127,12 @@ class OllamaClient:
             )
 
     async def detect_anomalies(
-        self, metrics: Dict[str, Any], historical_context: List[Dict[str, Any]] = None
+        self, metrics: Dict[str, Any], historical_context: Optional[List[Dict[str, Any]]] = None
     ) -> OllamaDecision:
         """Detect anomalies using Ollama."""
         await self._ensure_model()
         
-        prompt = self._build_anomaly_prompt(metrics, historical_context)
+        prompt = self._build_anomaly_prompt(metrics, historical_context or [])
         
         try:
             response = await self._make_request(prompt)
@@ -207,36 +215,36 @@ Respond in JSON format:
         return prompt
 
     def _build_anomaly_prompt(
-        self, metrics: Dict[str, Any], historical_context: List[Dict[str, Any]] = None
+        self, metrics: Dict[str, Any], historical_context: List[Dict[str, Any]]
     ) -> str:
         """Build prompt for anomaly detection."""
-        historical_data = ""
-        if historical_context:
-            historical_data = f"\nHistorical Context (last {len(historical_context)} data points):\n{json.dumps(historical_context[-5:], indent=2)}"
-
-        prompt = f"""You are an AI anomaly detection specialist. Analyze the current metrics for anomalies.
+        prompt = f"""You are an AI anomaly detection expert. Analyze the following system metrics and detect any anomalies.
 
 Current Metrics:
-{json.dumps(metrics, indent=2)}{historical_data}
+{json.dumps(metrics, indent=2)}
+
+Historical Context (last 10 data points):
+{json.dumps(historical_context[-10:] if historical_context else [], indent=2)}
 
 Recent Decision History:
 {self._format_decision_history()}
 
-Please detect any anomalies:
-1. Identify unusual patterns or values
-2. Assess the severity of any anomalies
-3. Provide confidence in your detection (0.0-1.0)
-4. Determine risk level (low/medium/high/critical)
-5. Suggest monitoring or action recommendations
-6. Note any affected metrics or systems
+Please detect any anomalies and provide:
+1. A clear decision about detected anomalies
+2. Detailed reasoning for your assessment
+3. Confidence level (0.0-1.0)
+4. Risk level (low/medium/high/critical)
+5. List of specific anomalies detected
+6. Severity assessment
+7. Affected metrics
 
 Respond in JSON format:
 {{
     "decision": "anomaly assessment",
-    "reasoning": "what anomalies were detected and why",
-    "confidence": 0.75,
+    "reasoning": "detailed reasoning",
+    "confidence": 0.85,
     "risk_level": "medium",
-    "alternatives": ["monitor closely", "investigate further"],
+    "alternatives": ["action1", "action2"],
     "metadata": {{
         "anomalies_detected": ["anomaly1", "anomaly2"],
         "severity": "medium",
@@ -258,8 +266,24 @@ Respond in JSON format:
         
         return "\n".join(formatted)
 
+    @classmethod
+    def _can_make_request(cls):
+        with cls._lock:
+            now = datetime.now()
+            # Remove timestamps older than 60s
+            while cls._request_timestamps and (now - cls._request_timestamps[0]).total_seconds() > 60:
+                cls._request_timestamps.popleft()
+            return len(cls._request_timestamps) < cls._rate_limit
+
+    @classmethod
+    def _record_request(cls):
+        with cls._lock:
+            cls._request_timestamps.append(datetime.now())
+
     async def _make_request(self, prompt: str) -> str:
-        """Make request to Ollama API."""
+        if not self._can_make_request():
+            raise Exception("Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.")
+        self._record_request()
         await self._ensure_model()
         
         for attempt in range(self.retry_attempts):
@@ -273,15 +297,17 @@ Respond in JSON format:
                     "options": {
                         "temperature": 0.3,
                         "top_p": 0.9,
-                        "num_predict": 1000
+                        "num_predict": 500,  # Reduced from 1000 to 500 for faster responses
+                        "top_k": 40,
+                        "repeat_penalty": 1.1
                     }
                 }
                 
-                async with aiohttp.ClientSession() as session:
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(
                         f"{self.base_url}/api/generate",
-                        json=payload,
-                        timeout=self.timeout
+                        json=payload
                     ) as response:
                         if response.status == 200:
                             data = await response.json()
@@ -412,8 +438,9 @@ Respond in JSON format:
     async def health_check(self) -> bool:
         """Check if Ollama is available and healthy."""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.base_url}/api/tags", timeout=5) as response:
+            timeout = aiohttp.ClientTimeout(total=5)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{self.base_url}/api/tags") as response:
                     return response.status == 200
         except Exception as e:
             logger.error(f"Ollama health check failed: {e}")
@@ -425,5 +452,5 @@ Respond in JSON format:
         return self.available_models.copy()
 
 
-# Global instance
+# Singleton instance for agent use
 ollama_client = OllamaClient()

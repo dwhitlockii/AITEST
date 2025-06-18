@@ -8,6 +8,9 @@ import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
 import json
+import hashlib
+import asyncio
+import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
@@ -50,6 +53,14 @@ class PredictiveAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("PredictiveAgent initialized - ready to predict the future")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _prediction_hash(self, predictions, trends):
+        return hashlib.sha256(json.dumps({"predictions": predictions, "trends": trends}, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform predictive analysis and forecasting."""
@@ -169,29 +180,31 @@ class PredictiveAgent(BaseAgent):
             self.logger.error(f"Failed to generate simulated metric: {e}")
             return 50.0
 
-    async def _generate_predictions(self) -> Dict[str, Any]:
-        """Generate predictions for various metrics."""
+    async def _generate_predictions(self):
+        # Throttle/caching logic
+        if not hasattr(self, 'prediction_cache'):
+            self.prediction_cache = {}
+        cache_ttl = 300  # 5 min
+        now = datetime.now()
+        predictions = await self._collect_historical_data()
+        trends = await self._detect_trends()
+        pred_hash = self._prediction_hash(predictions, trends)
+        cached = self.prediction_cache.get(pred_hash)
+        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            return cached["result"]
         try:
-            predictions = {
-                "timestamp": datetime.now().isoformat(),
-                "horizon_hours": self.prediction_horizon,
-                "predictions": {}
-            }
-            
-            for metric in self.predictable_metrics:
-                metric_predictions = await self._predict_metric(metric)
-                predictions["predictions"][metric] = metric_predictions
-            
-            # Store predictions
-            self.predictions.append(predictions)
-            if len(self.predictions) > 100:
-                self.predictions.pop(0)
-            
-            return predictions
-
+            result = await ollama_client.analyze_metrics({"predictions": predictions, "trends": trends}, "Predictive analysis")
+            # If result is an OllamaDecision, convert to dict
+            if hasattr(result, 'dict'):
+                result = result.dict()
+            # Ensure result is a dict with 'predictions' key for downstream code
+            if not isinstance(result, dict) or 'predictions' not in result:
+                result = {"predictions": {}, "error": "Invalid LLM result structure"}
+            self.prediction_cache[pred_hash] = {"result": result, "timestamp": now.isoformat()}
+            return result
         except Exception as e:
-            self.logger.error(f"Failed to generate predictions: {e}")
-            return {"error": str(e)}
+            self.logger.error(f"LLM predictive analysis failed: {e}")
+            return {"predictions": {}, "error": str(e)}
 
     async def _predict_metric(self, metric_name: str) -> Dict[str, Any]:
         """Predict a specific metric."""
@@ -348,12 +361,19 @@ class PredictiveAgent(BaseAgent):
         """Identify potential issues based on predictions and trends."""
         try:
             potential_issues = []
-            
+            # If predictions is an OllamaDecision, convert to dict
+            if hasattr(predictions, 'dict'):
+                predictions = predictions.dict()
+            # If trends is an OllamaDecision, convert to dict
+            if hasattr(trends, 'dict'):
+                trends = trends.dict()
             # Check predictions for potential issues
             for metric_name, prediction_data in predictions.get("predictions", {}).items():
+                # If prediction_data is an OllamaDecision, convert to dict
+                if hasattr(prediction_data, 'dict'):
+                    prediction_data = prediction_data.dict()
                 prediction = prediction_data.get("prediction")
                 confidence = prediction_data.get("confidence", 0)
-                
                 if prediction is not None and confidence > self.confidence_threshold:
                     # Check for critical thresholds
                     if metric_name == "cpu_usage" and prediction > 90:
@@ -386,12 +406,13 @@ class PredictiveAgent(BaseAgent):
                             "confidence": confidence,
                             "timestamp": datetime.now().isoformat()
                         })
-            
             # Check trends for concerning patterns
             for metric_name, trend_data in trends.get("trends", {}).items():
+                # If trend_data is an OllamaDecision, convert to dict
+                if hasattr(trend_data, 'dict'):
+                    trend_data = trend_data.dict()
                 trend = trend_data.get("trend")
                 strength = trend_data.get("strength", 0)
-                
                 if trend == "increasing" and strength > 0.7:
                     if metric_name in ["cpu_usage", "memory_usage", "disk_usage"]:
                         potential_issues.append({
@@ -403,9 +424,7 @@ class PredictiveAgent(BaseAgent):
                             "strength": strength,
                             "timestamp": datetime.now().isoformat()
                         })
-            
             return potential_issues
-
         except Exception as e:
             self.logger.error(f"Failed to identify potential issues: {e}")
             return []
@@ -453,17 +472,17 @@ class PredictiveAgent(BaseAgent):
     async def _update_models(self, predictions: Dict[str, Any], accuracy_analysis: Dict[str, Any]):
         """Update predictive models based on accuracy analysis."""
         try:
-            # Store model performance
+            # If predictions is an OllamaDecision, convert to dict
+            if hasattr(predictions, 'dict'):
+                predictions = predictions.dict()
             model_update = {
                 "timestamp": datetime.now().isoformat(),
                 "accuracy": accuracy_analysis.get("accuracy", 0),
                 "predictions_count": len(predictions.get("predictions", {})),
                 "model_version": "1.0"
             }
-            
             # In a real implementation, you'd update ML models here
             self.logger.debug(f"Models updated - Accuracy: {accuracy_analysis.get('accuracy', 0)}")
-
         except Exception as e:
             self.logger.error(f"Failed to update models: {e}")
 

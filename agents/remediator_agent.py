@@ -8,6 +8,8 @@ import asyncio
 import subprocess
 import shutil
 import os
+import hashlib
+import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
@@ -51,6 +53,15 @@ class RemediatorAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("RemediatorAgent initialized - ready to fix what's broken")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _target_hash(self, target):
+        import json
+        return hashlib.sha256(json.dumps(target, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Check for issues that need remediation and take action."""
@@ -321,23 +332,25 @@ class RemediatorAgent(BaseAgent):
         )
 
     async def _get_remediation_plan(self, target: Dict[str, Any]) -> Any:
-        """Get Ollama recommendation for remediation."""
+        # Throttle/caching logic
+        plan_cache = getattr(self, 'plan_cache', {})
+        cache_ttl = 300  # 5 min
+        now = datetime.now()
+        target_hash = self._target_hash(target)
+        cached = plan_cache.get(target_hash)
+        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            return cached["plan"]
         try:
-            current_metrics = await self._get_current_metrics()
-            available_actions = [
-                "restart_service",
-                "clean_disk_space",
-                "kill_process",
-                "clear_temp_files",
-                "restart_process",
-            ]
-            llm_decision = await ollama_client.recommend_remediation(
-                target["issue"], current_metrics, available_actions
+            plan = await ollama_client.recommend_remediation(
+                target.get("issue", ""),
+                target.get("metrics", {}),
+                target.get("available_actions", [])
             )
-            self.log_gpt_decision(llm_decision["decision"], llm_decision["reasoning"])
-            return llm_decision
+            plan_cache[target_hash] = {"plan": plan, "timestamp": now.isoformat()}
+            self.plan_cache = plan_cache
+            return plan
         except Exception as e:
-            self.logger.error(f"Failed to get LLM remediation plan: {e}")
+            self.logger.error(f"LLM remediation plan failed: {e}")
             return self._get_fallback_remediation_plan(target)
 
     async def _get_current_metrics(self) -> Dict[str, Any]:

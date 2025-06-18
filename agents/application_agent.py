@@ -9,6 +9,9 @@ import subprocess
 import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import hashlib
+import asyncio
+import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
@@ -54,6 +57,15 @@ class ApplicationAgent(BaseAgent):
         self.persistence = PersistenceManager(self.db_path)
 
         self.logger.info("ApplicationAgent initialized - ready to monitor application performance")
+
+    async def start(self):
+        # Stagger start to avoid LLM spikes
+        await asyncio.sleep(random.uniform(0, 10))
+        await super().start()
+
+    def _metrics_hash(self, app_metrics, process_metrics, health_metrics):
+        import json
+        return hashlib.sha256(json.dumps({"app": app_metrics, "proc": process_metrics, "health": health_metrics}, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
         """Perform application monitoring and analysis."""
@@ -369,24 +381,45 @@ class ApplicationAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Analyze application performance using Ollama."""
         try:
-            # Combine all application data for analysis
-            application_data = {
-                "app_metrics": app_metrics,
-                "process_metrics": process_metrics,
-                "health_metrics": health_metrics
-            }
-            
-            # Use Ollama to analyze application performance
-            analysis_result = await ollama_client.analyze_metrics(application_data, "Application performance analysis")
-            
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
-                "performance_level": analysis_result.risk_level,
-                "recommendations": analysis_result.alternatives,
-                "confidence": analysis_result.confidence,
-                "analysis": analysis_result.decision
-            }
+            # Throttle/caching logic
+            if not hasattr(self, 'analysis_cache'):
+                self.analysis_cache = {}
+            cache_ttl = 300  # 5 min
+            now = datetime.now()
+            metrics_hash = self._metrics_hash(app_metrics, process_metrics, health_metrics)
+            cached = self.analysis_cache.get(metrics_hash)
+            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+                return cached["result"]
+            try:
+                application_data = {
+                    "app_metrics": app_metrics,
+                    "process_metrics": process_metrics,
+                    "health_metrics": health_metrics
+                }
+                analysis_result = await ollama_client.analyze_metrics(application_data, "Application performance analysis")
+                # If analysis_result is an OllamaDecision, convert to dict
+                if hasattr(analysis_result, 'dict'):
+                    analysis_result = analysis_result.dict()
+                result = {
+                    "timestamp": now.isoformat(),
+                    "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
+                    "performance_level": analysis_result.get("risk_level", "unknown"),
+                    "recommendations": analysis_result.get("alternatives", []),
+                    "confidence": analysis_result.get("confidence", 0.0),
+                    "analysis": analysis_result.get("decision", "Analysis failed")
+                }
+                self.analysis_cache[metrics_hash] = {"result": result, "timestamp": now.isoformat()}
+                return result
+            except Exception as e:
+                self.logger.error(f"Failed to analyze application performance: {e}")
+                return {
+                    "timestamp": now.isoformat(),
+                    "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
+                    "performance_level": "unknown",
+                    "recommendations": [],
+                    "confidence": 0.0,
+                    "analysis": "Analysis failed"
+                }
 
         except Exception as e:
             self.logger.error(f"Failed to analyze application performance: {e}")
