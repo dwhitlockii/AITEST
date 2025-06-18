@@ -15,7 +15,7 @@ import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -38,11 +38,19 @@ class ApplicationAgent(BaseAgent):
 
         # Application monitoring
         self.monitored_applications = [
-            "chrome.exe", "firefox.exe", "code.exe", "notepad.exe",
-            "explorer.exe", "svchost.exe", "winlogon.exe"
+            "chrome.exe",
+            "firefox.exe",
+            "code.exe",
+            "notepad.exe",
+            "explorer.exe",
+            "svchost.exe",
+            "winlogon.exe",
         ]
         self.critical_processes = [
-            "explorer.exe", "svchost.exe", "winlogon.exe", "csrss.exe"
+            "explorer.exe",
+            "svchost.exe",
+            "winlogon.exe",
+            "csrss.exe",
         ]
 
         # Performance thresholds
@@ -56,7 +64,9 @@ class ApplicationAgent(BaseAgent):
         self.db_path = getattr(config, "db_path", "data/agent_system.db")
         self.persistence = PersistenceManager(self.db_path)
 
-        self.logger.info("ApplicationAgent initialized - ready to monitor application performance")
+        self.logger.info(
+            "ApplicationAgent initialized - ready to monitor application performance"
+        )
 
     async def start(self):
         # Stagger start to avoid LLM spikes
@@ -65,7 +75,13 @@ class ApplicationAgent(BaseAgent):
 
     def _metrics_hash(self, app_metrics, process_metrics, health_metrics):
         import json
-        return hashlib.sha256(json.dumps({"app": app_metrics, "proc": process_metrics, "health": health_metrics}, sort_keys=True).encode()).hexdigest()
+
+        return hashlib.sha256(
+            json.dumps(
+                {"app": app_metrics, "proc": process_metrics, "health": health_metrics},
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
 
     async def _perform_check(self):
         """Perform application monitoring and analysis."""
@@ -97,7 +113,11 @@ class ApplicationAgent(BaseAgent):
 
             # Update application status
             await self._update_application_status(
-                app_metrics, process_metrics, health_metrics, performance_analysis, issues
+                app_metrics,
+                process_metrics,
+                health_metrics,
+                performance_analysis,
+                issues,
             )
 
             # Persist application data if enabled
@@ -114,7 +134,11 @@ class ApplicationAgent(BaseAgent):
 
             # Broadcast application status
             await self._broadcast_application_status(
-                app_metrics, process_metrics, health_metrics, performance_analysis, issues
+                app_metrics,
+                process_metrics,
+                health_metrics,
+                performance_analysis,
+                issues,
             )
 
             self.success_count += 1
@@ -151,27 +175,33 @@ class ApplicationAgent(BaseAgent):
             import psutil
 
             running_apps = []
-            
-            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+
+            for proc in psutil.process_iter(
+                ["pid", "name", "cpu_percent", "memory_percent", "status"]
+            ):
                 try:
                     proc_info = proc.info
-                    
+
                     # Check if it's a monitored application
-                    if proc_info['name'] in self.monitored_applications:
+                    if proc_info["name"] in self.monitored_applications:
                         app_info = {
-                            "name": proc_info['name'],
-                            "pid": proc_info['pid'],
-                            "cpu_percent": proc_info.get('cpu_percent', 0),
-                            "memory_percent": proc_info.get('memory_percent', 0),
-                            "status": proc_info.get('status', 'unknown'),
-                            "is_critical": proc_info['name'] in self.critical_processes,
-                            "start_time": datetime.fromtimestamp(proc.create_time()).isoformat() if hasattr(proc, 'create_time') else None
+                            "name": proc_info["name"],
+                            "pid": proc_info["pid"],
+                            "cpu_percent": proc_info.get("cpu_percent", 0),
+                            "memory_percent": proc_info.get("memory_percent", 0),
+                            "status": proc_info.get("status", "unknown"),
+                            "is_critical": proc_info["name"] in self.critical_processes,
+                            "start_time": (
+                                datetime.fromtimestamp(proc.create_time()).isoformat()
+                                if hasattr(proc, "create_time")
+                                else None
+                            ),
                         }
                         running_apps.append(app_info)
-                        
+
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
+
             return running_apps
 
         except Exception as e:
@@ -188,27 +218,29 @@ class ApplicationAgent(BaseAgent):
                 "active_processes": 0,
                 "zombie_processes": 0,
                 "high_cpu_processes": 0,
-                "high_memory_processes": 0
+                "high_memory_processes": 0,
             }
-            
-            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+
+            for proc in psutil.process_iter(
+                ["pid", "name", "cpu_percent", "memory_percent", "status"]
+            ):
                 try:
                     proc_info = proc.info
-                    
-                    if proc_info.get('status') == 'running':
-                        performance_data['active_processes'] += 1
-                    elif proc_info.get('status') == 'zombie':
-                        performance_data['zombie_processes'] += 1
-                    
-                    if proc_info.get('cpu_percent', 0) > self.cpu_threshold:
-                        performance_data['high_cpu_processes'] += 1
-                    
-                    if proc_info.get('memory_percent', 0) > self.memory_threshold:
-                        performance_data['high_memory_processes'] += 1
-                        
+
+                    if proc_info.get("status") == "running":
+                        performance_data["active_processes"] += 1
+                    elif proc_info.get("status") == "zombie":
+                        performance_data["zombie_processes"] += 1
+
+                    if proc_info.get("cpu_percent", 0) > self.cpu_threshold:
+                        performance_data["high_cpu_processes"] += 1
+
+                    if proc_info.get("memory_percent", 0) > self.memory_threshold:
+                        performance_data["high_memory_processes"] += 1
+
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
+
             return performance_data
 
         except Exception as e:
@@ -221,14 +253,22 @@ class ApplicationAgent(BaseAgent):
             import psutil
 
             memory = psutil.virtual_memory()
-            
+
             return {
                 "total_memory_gb": memory.total / (1024**3),
                 "available_memory_gb": memory.available / (1024**3),
                 "used_memory_gb": memory.used / (1024**3),
                 "memory_percent": memory.percent,
-                "swap_total_gb": psutil.swap_memory().total / (1024**3) if hasattr(psutil, 'swap_memory') else 0,
-                "swap_used_gb": psutil.swap_memory().used / (1024**3) if hasattr(psutil, 'swap_memory') else 0
+                "swap_total_gb": (
+                    psutil.swap_memory().total / (1024**3)
+                    if hasattr(psutil, "swap_memory")
+                    else 0
+                ),
+                "swap_used_gb": (
+                    psutil.swap_memory().used / (1024**3)
+                    if hasattr(psutil, "swap_memory")
+                    else 0
+                ),
             }
 
         except Exception as e:
@@ -242,15 +282,17 @@ class ApplicationAgent(BaseAgent):
 
             cpu_percent = psutil.cpu_percent(interval=1)
             cpu_count = psutil.cpu_count()
-            
+
             # Get per-core CPU usage
             cpu_per_core = psutil.cpu_percent(interval=1, percpu=True)
-            
+
             return {
                 "cpu_percent": cpu_percent,
                 "cpu_count": cpu_count,
                 "cpu_per_core": cpu_per_core,
-                "load_average": psutil.getloadavg() if hasattr(psutil, 'getloadavg') else None
+                "load_average": (
+                    psutil.getloadavg() if hasattr(psutil, "getloadavg") else None
+                ),
             }
 
         except Exception as e:
@@ -263,14 +305,22 @@ class ApplicationAgent(BaseAgent):
             import psutil
 
             disk_io = psutil.disk_io_counters()
-            
+            if disk_io is None:
+                return {
+                    "read_bytes": 0,
+                    "write_bytes": 0,
+                    "read_count": 0,
+                    "write_count": 0,
+                    "read_time": 0,
+                    "write_time": 0,
+                }
             return {
                 "read_bytes": disk_io.read_bytes,
                 "write_bytes": disk_io.write_bytes,
                 "read_count": disk_io.read_count,
                 "write_count": disk_io.write_count,
                 "read_time": disk_io.read_time,
-                "write_time": disk_io.write_time
+                "write_time": disk_io.write_time,
             }
 
         except Exception as e:
@@ -287,7 +337,7 @@ class ApplicationAgent(BaseAgent):
                     "timestamp": datetime.now().isoformat(),
                     "application": "system",
                     "error_type": "info",
-                    "message": "No application errors detected"
+                    "message": "No application errors detected",
                 }
             ]
 
@@ -301,33 +351,43 @@ class ApplicationAgent(BaseAgent):
             import psutil
 
             process_data = {}
-            
+
             for app_name in self.monitored_applications:
                 process_data[app_name] = {
                     "running": False,
                     "instances": 0,
                     "total_cpu": 0.0,
                     "total_memory": 0.0,
-                    "processes": []
+                    "processes": [],
                 }
-                
-                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+
+                for proc in psutil.process_iter(
+                    ["pid", "name", "cpu_percent", "memory_percent", "status"]
+                ):
                     try:
-                        if proc.info['name'] == app_name:
+                        if proc.info["name"] == app_name:
                             process_data[app_name]["running"] = True
                             process_data[app_name]["instances"] += 1
-                            process_data[app_name]["total_cpu"] += proc.info.get('cpu_percent', 0)
-                            process_data[app_name]["total_memory"] += proc.info.get('memory_percent', 0)
-                            
-                            process_data[app_name]["processes"].append({
-                                "pid": proc.info['pid'],
-                                "cpu_percent": proc.info.get('cpu_percent', 0),
-                                "memory_percent": proc.info.get('memory_percent', 0),
-                                "status": proc.info.get('status', 'unknown')
-                            })
+                            process_data[app_name]["total_cpu"] += proc.info.get(
+                                "cpu_percent", 0
+                            )
+                            process_data[app_name]["total_memory"] += proc.info.get(
+                                "memory_percent", 0
+                            )
+
+                            process_data[app_name]["processes"].append(
+                                {
+                                    "pid": proc.info["pid"],
+                                    "cpu_percent": proc.info.get("cpu_percent", 0),
+                                    "memory_percent": proc.info.get(
+                                        "memory_percent", 0
+                                    ),
+                                    "status": proc.info.get("status", "unknown"),
+                                }
+                            )
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         continue
-            
+
             return process_data
 
         except Exception as e:
@@ -345,130 +405,173 @@ class ApplicationAgent(BaseAgent):
                 "application_stability": "stable",
                 "performance_degradation": False,
                 "memory_pressure": False,
-                "cpu_pressure": False
+                "cpu_pressure": False,
             }
-            
+
             # Check critical processes
-            for proc in psutil.process_iter(['name']):
+            for proc in psutil.process_iter(["name"]):
                 try:
-                    if proc.info['name'] in self.critical_processes:
+                    if proc.info["name"] in self.critical_processes:
                         health_data["critical_processes_running"] += 1
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
+
             # Check for performance issues
             memory = psutil.virtual_memory()
             if memory.percent > self.memory_threshold:
                 health_data["memory_pressure"] = True
                 health_data["application_stability"] = "degraded"
-            
+
             cpu_percent = psutil.cpu_percent(interval=1)
             if cpu_percent > self.cpu_threshold:
                 health_data["cpu_pressure"] = True
                 health_data["application_stability"] = "degraded"
-            
+
             if health_data["memory_pressure"] or health_data["cpu_pressure"]:
                 health_data["performance_degradation"] = True
-            
+
             return health_data
 
         except Exception as e:
             self.logger.error(f"Failed to check application health: {e}")
             return {"error": str(e)}
 
+    def _ollama_to_dict(self, result):
+        """Helper to convert OllamaDecision to dict if needed."""
+        if hasattr(result, "dict"):
+            return result.dict()
+        return result
+
     async def _analyze_application_performance(
-        self, app_metrics: Dict[str, Any], process_metrics: Dict[str, Any], health_metrics: Dict[str, Any]
+        self,
+        app_metrics: Dict[str, Any],
+        process_metrics: Dict[str, Any],
+        health_metrics: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Analyze application performance using Ollama."""
+        """Analyze application performance using Ollama. Returns a dict with analysis results."""
         try:
             # Throttle/caching logic
-            if not hasattr(self, 'analysis_cache'):
+            if not hasattr(self, "analysis_cache"):
                 self.analysis_cache = {}
             cache_ttl = 300  # 5 min
             now = datetime.now()
-            metrics_hash = self._metrics_hash(app_metrics, process_metrics, health_metrics)
+            metrics_hash = self._metrics_hash(
+                app_metrics, process_metrics, health_metrics
+            )
             cached = self.analysis_cache.get(metrics_hash)
-            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            if cached and (
+                now - datetime.fromisoformat(cached["timestamp"])
+            ) < timedelta(seconds=cache_ttl):
                 return cached["result"]
             try:
                 application_data = {
                     "app_metrics": app_metrics,
                     "process_metrics": process_metrics,
-                    "health_metrics": health_metrics
+                    "health_metrics": health_metrics,
                 }
-                analysis_result = await ollama_client.analyze_metrics(application_data, "Application performance analysis")
-                # If analysis_result is an OllamaDecision, convert to dict
-                if hasattr(analysis_result, 'dict'):
-                    analysis_result = analysis_result.dict()
+                # Truncate prompt if needed
+                prompt_str = truncate_prompt(json.dumps(application_data), max_tokens=4096)
+                self.logger.debug(f"Ollama prompt length: {estimate_token_count(prompt_str)} tokens")
+                # Validate input data
+                if not isinstance(app_metrics, dict) or not isinstance(process_metrics, dict) or not isinstance(health_metrics, dict):
+                    self.logger.error("Invalid input data for LLM analysis")
+                    return {"error": "Invalid input data for LLM analysis"}
+                analysis_result = await self.llm_client.analyze_metrics(
+                    application_data, "Application performance analysis"
+                )
+                analysis_result = self._ollama_to_dict(analysis_result)
+                if not isinstance(analysis_result, dict):
+                    self.logger.error(f"LLM analysis did not return a dict: {type(analysis_result)}")
+                    return {
+                        "timestamp": now.isoformat(),
+                        "application_score": self._calculate_application_score(
+                            app_metrics, process_metrics, health_metrics
+                        ),
+                        "performance_level": "unknown",
+                        "recommendations": [],
+                        "confidence": 0.0,
+                        "analysis": "Analysis failed (invalid LLM result)",
+                    }
                 result = {
                     "timestamp": now.isoformat(),
-                    "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
+                    "application_score": self._calculate_application_score(
+                        app_metrics, process_metrics, health_metrics
+                    ),
                     "performance_level": analysis_result.get("risk_level", "unknown"),
                     "recommendations": analysis_result.get("alternatives", []),
                     "confidence": analysis_result.get("confidence", 0.0),
-                    "analysis": analysis_result.get("decision", "Analysis failed")
+                    "analysis": analysis_result.get("decision", "Analysis failed"),
                 }
-                self.analysis_cache[metrics_hash] = {"result": result, "timestamp": now.isoformat()}
+                self.analysis_cache[metrics_hash] = {
+                    "result": result,
+                    "timestamp": now.isoformat(),
+                }
                 return result
             except Exception as e:
                 self.logger.error(f"Failed to analyze application performance: {e}")
                 return {
                     "timestamp": now.isoformat(),
-                    "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
+                    "application_score": self._calculate_application_score(
+                        app_metrics, process_metrics, health_metrics
+                    ),
                     "performance_level": "unknown",
                     "recommendations": [],
                     "confidence": 0.0,
-                    "analysis": "Analysis failed"
+                    "analysis": "Analysis failed",
                 }
-
         except Exception as e:
             self.logger.error(f"Failed to analyze application performance: {e}")
             return {
                 "timestamp": datetime.now().isoformat(),
-                "application_score": self._calculate_application_score(app_metrics, process_metrics, health_metrics),
+                "application_score": self._calculate_application_score(
+                    app_metrics, process_metrics, health_metrics
+                ),
                 "performance_level": "unknown",
                 "recommendations": [],
                 "confidence": 0.0,
-                "analysis": "Analysis failed"
+                "analysis": "Analysis failed",
             }
 
     def _calculate_application_score(
-        self, app_metrics: Dict[str, Any], process_metrics: Dict[str, Any], health_metrics: Dict[str, Any]
+        self,
+        app_metrics: Dict[str, Any],
+        process_metrics: Dict[str, Any],
+        health_metrics: Dict[str, Any],
     ) -> float:
         """Calculate overall application performance score (0-100)."""
         try:
             score = 100.0
-            
+
             # Check critical processes
             critical_running = health_metrics.get("critical_processes_running", 0)
             total_critical = health_metrics.get("total_critical_processes", 0)
-            
+
             if total_critical > 0:
                 critical_percentage = (critical_running / total_critical) * 100
                 if critical_percentage < 100:
                     score -= (100 - critical_percentage) * 0.5
-            
+
             # Check memory pressure
             if health_metrics.get("memory_pressure", False):
                 score -= 20
-            
+
             # Check CPU pressure
             if health_metrics.get("cpu_pressure", False):
                 score -= 15
-            
+
             # Check application performance
             app_performance = app_metrics.get("application_performance", {})
             if app_performance.get("high_cpu_processes", 0) > 5:
                 score -= 10
-            
+
             if app_performance.get("high_memory_processes", 0) > 5:
                 score -= 10
-            
+
             # Check zombie processes
             zombie_count = app_performance.get("zombie_processes", 0)
             if zombie_count > 0:
                 score -= zombie_count * 5
-            
+
             return max(0.0, score)
 
         except Exception as e:
@@ -476,77 +579,92 @@ class ApplicationAgent(BaseAgent):
             return 50.0
 
     async def _detect_application_issues(
-        self, app_metrics: Dict[str, Any], process_metrics: Dict[str, Any], health_metrics: Dict[str, Any]
+        self,
+        app_metrics: Dict[str, Any],
+        process_metrics: Dict[str, Any],
+        health_metrics: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Detect application issues."""
         issues = []
-        
+
         try:
             # Check critical process issues
             critical_running = health_metrics.get("critical_processes_running", 0)
             total_critical = health_metrics.get("total_critical_processes", 0)
-            
+
             if critical_running < total_critical:
                 missing_critical = total_critical - critical_running
-                issues.append({
-                    "type": "critical_process_missing",
-                    "severity": "high",
-                    "description": f"{missing_critical} critical processes are not running",
-                    "missing_count": missing_critical,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "critical_process_missing",
+                        "severity": "high",
+                        "description": f"{missing_critical} critical processes are not running",
+                        "missing_count": missing_critical,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             # Check memory pressure
             if health_metrics.get("memory_pressure", False):
-                issues.append({
-                    "type": "memory_pressure",
-                    "severity": "medium",
-                    "description": "High memory usage detected",
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "memory_pressure",
+                        "severity": "medium",
+                        "description": "High memory usage detected",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             # Check CPU pressure
             if health_metrics.get("cpu_pressure", False):
-                issues.append({
-                    "type": "cpu_pressure",
-                    "severity": "medium",
-                    "description": "High CPU usage detected",
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "cpu_pressure",
+                        "severity": "medium",
+                        "description": "High CPU usage detected",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             # Check application performance issues
             app_performance = app_metrics.get("application_performance", {})
-            
+
             high_cpu_processes = app_performance.get("high_cpu_processes", 0)
             if high_cpu_processes > 5:
-                issues.append({
-                    "type": "high_cpu_processes",
-                    "severity": "medium",
-                    "description": f"{high_cpu_processes} processes using high CPU",
-                    "process_count": high_cpu_processes,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "high_cpu_processes",
+                        "severity": "medium",
+                        "description": f"{high_cpu_processes} processes using high CPU",
+                        "process_count": high_cpu_processes,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             high_memory_processes = app_performance.get("high_memory_processes", 0)
             if high_memory_processes > 5:
-                issues.append({
-                    "type": "high_memory_processes",
-                    "severity": "medium",
-                    "description": f"{high_memory_processes} processes using high memory",
-                    "process_count": high_memory_processes,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "high_memory_processes",
+                        "severity": "medium",
+                        "description": f"{high_memory_processes} processes using high memory",
+                        "process_count": high_memory_processes,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             zombie_processes = app_performance.get("zombie_processes", 0)
             if zombie_processes > 0:
-                issues.append({
-                    "type": "zombie_processes",
-                    "severity": "low",
-                    "description": f"{zombie_processes} zombie processes detected",
-                    "process_count": zombie_processes,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "zombie_processes",
+                        "severity": "low",
+                        "description": f"{zombie_processes} zombie processes detected",
+                        "process_count": zombie_processes,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             return issues
 
         except Exception as e:
@@ -558,7 +676,7 @@ class ApplicationAgent(BaseAgent):
         try:
             for issue in issues:
                 issue_type = issue.get("type")
-                
+
                 if issue_type == "critical_process_missing":
                     await self._restart_critical_processes(issue)
                 elif issue_type == "memory_pressure":
@@ -571,9 +689,11 @@ class ApplicationAgent(BaseAgent):
                     await self._manage_high_memory_processes(issue)
                 elif issue_type == "zombie_processes":
                     await self._cleanup_zombie_processes(issue)
-                
+
                 # Log the remediation action
-                self.logger.warning(f"Application remediation performed for {issue_type}: {issue.get('description')}")
+                self.logger.warning(
+                    f"Application remediation performed for {issue_type}: {issue.get('description')}"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to perform application remediation: {e}")
@@ -584,7 +704,7 @@ class ApplicationAgent(BaseAgent):
             # This would implement critical process restart logic
             # For now, just log the action
             self.logger.info("Would restart critical processes in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to restart critical processes: {e}")
 
@@ -594,7 +714,7 @@ class ApplicationAgent(BaseAgent):
             # This would implement memory optimization logic
             # For now, just log the action
             self.logger.info("Would optimize memory usage in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to optimize memory usage: {e}")
 
@@ -604,7 +724,7 @@ class ApplicationAgent(BaseAgent):
             # This would implement CPU optimization logic
             # For now, just log the action
             self.logger.info("Would optimize CPU usage in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to optimize CPU usage: {e}")
 
@@ -614,7 +734,7 @@ class ApplicationAgent(BaseAgent):
             # This would implement high CPU process management
             # For now, just log the action
             self.logger.info("Would manage high CPU processes in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to manage high CPU processes: {e}")
 
@@ -624,7 +744,7 @@ class ApplicationAgent(BaseAgent):
             # This would implement high memory process management
             # For now, just log the action
             self.logger.info("Would manage high memory processes in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to manage high memory processes: {e}")
 
@@ -634,49 +754,58 @@ class ApplicationAgent(BaseAgent):
             # This would implement zombie process cleanup
             # For now, just log the action
             self.logger.info("Would cleanup zombie processes in production")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to cleanup zombie processes: {e}")
 
     async def _update_application_status(
-        self, app_metrics: Dict[str, Any], process_metrics: Dict[str, Any], 
-        health_metrics: Dict[str, Any], analysis: Dict[str, Any], issues: List[Dict[str, Any]]
+        self,
+        app_metrics: Dict[str, Any],
+        process_metrics: Dict[str, Any],
+        health_metrics: Dict[str, Any],
+        analysis: Dict[str, Any],
+        issues: List[Dict[str, Any]],
     ):
         """Update application status."""
         try:
-            self.application_metrics.append({
-                "timestamp": datetime.now().isoformat(),
-                "app_metrics": app_metrics,
-                "process_metrics": process_metrics,
-                "health_metrics": health_metrics,
-                "analysis": analysis,
-                "issues": issues
-            })
-            
+            self.application_metrics.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "app_metrics": app_metrics,
+                    "process_metrics": process_metrics,
+                    "health_metrics": health_metrics,
+                    "analysis": analysis,
+                    "issues": issues,
+                }
+            )
+
             # Keep only recent metrics
             if len(self.application_metrics) > 100:
                 self.application_metrics = self.application_metrics[-100:]
-            
+
             # Update process monitoring
-            self.process_monitoring.append({
-                "timestamp": datetime.now().isoformat(),
-                "processes": process_metrics
-            })
+            self.process_monitoring.append(
+                {"timestamp": datetime.now().isoformat(), "processes": process_metrics}
+            )
             if len(self.process_monitoring) > 50:
                 self.process_monitoring = self.process_monitoring[-50:]
-            
+
             # Update application issues
             if issues:
                 self.application_issues.extend(issues)
                 if len(self.application_issues) > 50:
                     self.application_issues = self.application_issues[-50:]
-            
+
         except Exception as e:
             self.logger.error(f"Failed to update application status: {e}")
 
     async def _broadcast_application_status(
-        self, app_metrics: Dict[str, Any], process_metrics: Dict[str, Any], 
-        health_metrics: Dict[str, Any], analysis: Dict[str, Any], issues: List[Dict[str, Any]]
+        self,
+        app_metrics: Dict[str, Any],
+        process_metrics: Dict[str, Any],
+        health_metrics: Dict[str, Any],
+        analysis: Dict[str, Any],
+        issues: List[Dict[str, Any]],
     ):
         """Broadcast application status to other agents."""
         try:
@@ -688,36 +817,40 @@ class ApplicationAgent(BaseAgent):
                 "issues": issues,
                 "application_score": analysis.get("application_score", 0),
                 "performance_level": analysis.get("performance_level", "unknown"),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             await self.message_bus.broadcast(
                 sender=self.agent_name,
                 message_type=MessageType.APPLICATION_UPDATE,
                 content=application_status,
-                priority=MessagePriority.HIGH if issues else MessagePriority.NORMAL
+                priority=MessagePriority.HIGH if issues else MessagePriority.NORMAL,
             )
-            
+
         except Exception as e:
             self.logger.error(f"Failed to broadcast application status: {e}")
 
     async def _setup_subscriptions(self):
         """Set up message subscriptions for the application agent."""
         await super()._setup_subscriptions()
-        
+
         # Subscribe to application-related messages
-        await self.message_bus.subscribe(MessageType.ALERT, self._handle_application_alert)
+        await self.message_bus.subscribe(
+            MessageType.ALERT, self._handle_application_alert
+        )
         self.subscribed_message_types.append(MessageType.ALERT)
 
     async def _handle_application_alert(self, message):
         """Handle application-related alerts."""
         if message.sender == self.agent_name:
             return  # Ignore our own messages
-        
+
         # Process application alerts
         alert_content = message.content
         if "application" in alert_content.get("type", "").lower():
-            self.logger.warning(f"Application alert received: {alert_content.get('message', 'Unknown alert')}")
+            self.logger.warning(
+                f"Application alert received: {alert_content.get('message', 'Unknown alert')}"
+            )
 
     def get_application_summary(self) -> Dict[str, Any]:
         """Get a summary of application status."""
@@ -725,12 +858,26 @@ class ApplicationAgent(BaseAgent):
             "total_application_metrics": len(self.application_metrics),
             "total_process_monitoring": len(self.process_monitoring),
             "total_application_issues": len(self.application_issues),
-            "recent_issues": self.application_issues[-5:] if self.application_issues else [],
+            "recent_issues": (
+                self.application_issues[-5:] if self.application_issues else []
+            ),
             "application_score": self._calculate_application_score(
-                self.application_metrics[-1]["app_metrics"] if self.application_metrics else {},
-                self.application_metrics[-1]["process_metrics"] if self.application_metrics else {},
-                self.application_metrics[-1]["health_metrics"] if self.application_metrics else {}
+                (
+                    self.application_metrics[-1]["app_metrics"]
+                    if self.application_metrics
+                    else {}
+                ),
+                (
+                    self.application_metrics[-1]["process_metrics"]
+                    if self.application_metrics
+                    else {}
+                ),
+                (
+                    self.application_metrics[-1]["health_metrics"]
+                    if self.application_metrics
+                    else {}
+                ),
             ),
             "monitored_applications": self.monitored_applications,
-            "critical_processes": self.critical_processes
-        } 
+            "critical_processes": self.critical_processes,
+        }

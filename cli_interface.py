@@ -155,11 +155,11 @@ class CLIInterface:
 
             panel = Panel(
                 status_text.format(
-                    system_health=system_info.get('system_health', 'Unknown'),
-                    uptime=system_info.get('uptime', 0),
-                    running_agents=system_info.get('running_agents', 0),
-                    total_agents=system_info.get('total_agents', 0),
-                    startup_time=system_info.get('startup_time', 'Unknown'),
+                    system_health=system_info.get("system_health", "Unknown"),
+                    uptime=system_info.get("uptime", 0),
+                    running_agents=system_info.get("running_agents", 0),
+                    total_agents=system_info.get("total_agents", 0),
+                    startup_time=system_info.get("startup_time", "Unknown"),
                 ),
                 title="[bold]System Status[/bold]",
                 border_style=health_color,

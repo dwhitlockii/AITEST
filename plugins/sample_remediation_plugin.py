@@ -2,10 +2,12 @@ from plugins.base_plugin import BasePlugin
 import os
 import subprocess
 
+
 class SampleRemediationPlugin(BasePlugin):
     """
     Sample plugin that adds a custom remediation action: clear Windows event logs.
     """
+
     def register(self, system_context):
         orchestrator = system_context.get("orchestrator")
         config = system_context.get("config")
@@ -18,9 +20,13 @@ class SampleRemediationPlugin(BasePlugin):
                 remediator.custom_actions.append("clear_event_logs")
             else:
                 remediator.custom_actions = ["clear_event_logs"]
-            remediator.logger.info("SampleRemediationPlugin: Registered clear_event_logs action.")
+            remediator.logger.info(
+                "SampleRemediationPlugin: Registered clear_event_logs action."
+            )
         else:
-            print("[SampleRemediationPlugin] RemediatorAgent not found; action not registered.")
+            print(
+                "[SampleRemediationPlugin] RemediatorAgent not found; action not registered."
+            )
 
     def get_config(self):
         return self.config
@@ -38,13 +44,15 @@ class SampleRemediationPlugin(BasePlugin):
                 "ForwardedEvents",
             ]
             for log in logs:
-                result = subprocess.run([
-                    "wevtutil", "cl", log
-                ], capture_output=True, text=True, timeout=10)
+                result = subprocess.run(
+                    ["wevtutil", "cl", log], capture_output=True, text=True, timeout=10
+                )
                 if result.returncode != 0:
-                    print(f"[SampleRemediationPlugin] Failed to clear {log}: {result.stderr}")
+                    print(
+                        f"[SampleRemediationPlugin] Failed to clear {log}: {result.stderr}"
+                    )
             print("[SampleRemediationPlugin] Cleared Windows event logs.")
             return True
         except Exception as e:
             print(f"[SampleRemediationPlugin] Error clearing event logs: {e}")
-            return False 
+            return False

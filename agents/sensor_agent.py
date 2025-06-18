@@ -63,7 +63,9 @@ class SensorAgent(BaseAgent):
                         timestamp=metrics["timestamp"],
                         agent=self.agent_name,
                         metric_type="system_metrics",
-                        value=str(metrics),  # Store as stringified dict (could use json.dumps)
+                        value=str(
+                            metrics
+                        ),  # Store as stringified dict (could use json.dumps)
                     )
                 except Exception as e:
                     self.logger.error(f"Failed to persist metrics: {e}")

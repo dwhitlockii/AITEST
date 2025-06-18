@@ -12,10 +12,11 @@ import asyncio
 import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import shutil
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -38,15 +39,15 @@ class BackupAgent(BaseAgent):
 
         # Backup configuration
         self.backup_sources = [
-            "C:\\Users", "C:\\ProgramData", "C:\\Windows\\System32\\config"
+            "C:\\Users",
+            "C:\\ProgramData",
+            "C:\\Windows\\System32\\config",
         ]
-        self.backup_destinations = [
-            "D:\\Backups", "\\\\backup-server\\backups"
-        ]
+        self.backup_destinations = ["D:\\Backups", "\\\\backup-server\\backups"]
         self.backup_schedule = {
             "daily": "02:00",
             "weekly": "Sunday 03:00",
-            "monthly": "First Sunday 04:00"
+            "monthly": "First Sunday 04:00",
         }
 
         # Backup thresholds
@@ -68,7 +69,16 @@ class BackupAgent(BaseAgent):
         await super().start()
 
     def _backup_hash(self, backup_status, integrity_checks, recovery_tests):
-        return hashlib.sha256(json.dumps({"status": backup_status, "integrity": integrity_checks, "recovery": recovery_tests}, sort_keys=True).encode()).hexdigest()
+        return hashlib.sha256(
+            json.dumps(
+                {
+                    "status": backup_status,
+                    "integrity": integrity_checks,
+                    "recovery": recovery_tests,
+                },
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
 
     async def _perform_check(self):
         """Perform backup monitoring and management."""
@@ -136,7 +146,7 @@ class BackupAgent(BaseAgent):
                 "backup_storage": await self._check_backup_storage(),
                 "backup_schedule": await self._check_backup_schedule(),
                 "backup_retention": await self._check_backup_retention(),
-                "backup_encryption": await self._check_backup_encryption()
+                "backup_encryption": await self._check_backup_encryption(),
             }
 
             return backup_status
@@ -149,12 +159,16 @@ class BackupAgent(BaseAgent):
         """Get information about backup jobs."""
         try:
             backup_jobs = []
-            
+
             # Check for common backup tools and jobs
             backup_tools = [
-                "Windows Backup", "Veeam", "Acronis", "Backup Exec", "Symantec"
+                "Windows Backup",
+                "Veeam",
+                "Acronis",
+                "Backup Exec",
+                "Symantec",
             ]
-            
+
             for tool in backup_tools:
                 # This would check actual backup job status
                 # For now, return simulated results
@@ -165,10 +179,10 @@ class BackupAgent(BaseAgent):
                     "next_run": (datetime.now() + timedelta(hours=22)).isoformat(),
                     "size_mb": 1024,
                     "duration_minutes": 45,
-                    "success_rate": 0.95
+                    "success_rate": 0.95,
                 }
                 backup_jobs.append(job_info)
-            
+
             return backup_jobs
 
         except Exception as e:
@@ -179,31 +193,28 @@ class BackupAgent(BaseAgent):
         """Check backup storage status."""
         try:
             storage_status = {}
-            
+
             for destination in self.backup_destinations:
                 try:
                     if os.path.exists(destination):
                         # Get storage information
                         total, used, free = shutil.disk_usage(destination)
-                        
+
                         storage_status[destination] = {
                             "available": True,
                             "total_gb": total / (1024**3),
                             "used_gb": used / (1024**3),
                             "free_gb": free / (1024**3),
-                            "usage_percent": (used / total) * 100
+                            "usage_percent": (used / total) * 100,
                         }
                     else:
                         storage_status[destination] = {
                             "available": False,
-                            "error": "Path not accessible"
+                            "error": "Path not accessible",
                         }
                 except Exception as e:
-                    storage_status[destination] = {
-                        "available": False,
-                        "error": str(e)
-                    }
-            
+                    storage_status[destination] = {"available": False, "error": str(e)}
+
             return storage_status
 
         except Exception as e:
@@ -216,9 +227,9 @@ class BackupAgent(BaseAgent):
             schedule_status = {
                 "daily_backup": await self._check_schedule_compliance("daily"),
                 "weekly_backup": await self._check_schedule_compliance("weekly"),
-                "monthly_backup": await self._check_schedule_compliance("monthly")
+                "monthly_backup": await self._check_schedule_compliance("monthly"),
             }
-            
+
             return schedule_status
 
         except Exception as e:
@@ -234,7 +245,7 @@ class BackupAgent(BaseAgent):
                 "compliant": True,
                 "last_backup": (datetime.now() - timedelta(hours=2)).isoformat(),
                 "next_backup": (datetime.now() + timedelta(hours=22)).isoformat(),
-                "status": "on_schedule"
+                "status": "on_schedule",
             }
 
         except Exception as e:
@@ -250,9 +261,9 @@ class BackupAgent(BaseAgent):
                 "monthly_retention": 12,  # months
                 "compliance": True,
                 "oldest_backup": (datetime.now() - timedelta(days=30)).isoformat(),
-                "newest_backup": (datetime.now() - timedelta(hours=2)).isoformat()
+                "newest_backup": (datetime.now() - timedelta(hours=2)).isoformat(),
             }
-            
+
             return retention_status
 
         except Exception as e:
@@ -266,9 +277,9 @@ class BackupAgent(BaseAgent):
                 "encryption_enabled": True,
                 "encryption_algorithm": "AES-256",
                 "key_management": "secure",
-                "compliance": True
+                "compliance": True,
             }
-            
+
             return encryption_status
 
         except Exception as e:
@@ -283,7 +294,7 @@ class BackupAgent(BaseAgent):
                 "file_integrity": await self._check_file_integrity(),
                 "backup_consistency": await self._check_backup_consistency(),
                 "data_validation": await self._check_data_validation(),
-                "restore_test": await self._test_restore_capability()
+                "restore_test": await self._test_restore_capability(),
             }
 
             return integrity_checks
@@ -301,7 +312,7 @@ class BackupAgent(BaseAgent):
                 "checksum_validation": True,
                 "corrupted_files": 0,
                 "total_files": 10000,
-                "integrity_score": 100.0
+                "integrity_score": 100.0,
             }
 
         except Exception as e:
@@ -315,7 +326,7 @@ class BackupAgent(BaseAgent):
             return {
                 "consistency_check": True,
                 "inconsistencies_found": 0,
-                "consistency_score": 100.0
+                "consistency_score": 100.0,
             }
 
         except Exception as e:
@@ -329,7 +340,7 @@ class BackupAgent(BaseAgent):
             return {
                 "data_validation": True,
                 "validation_errors": 0,
-                "validation_score": 100.0
+                "validation_score": 100.0,
             }
 
         except Exception as e:
@@ -345,7 +356,7 @@ class BackupAgent(BaseAgent):
                 "restore_test": True,
                 "restore_time_minutes": 30,
                 "restore_success_rate": 0.95,
-                "last_test": (datetime.now() - timedelta(days=7)).isoformat()
+                "last_test": (datetime.now() - timedelta(days=7)).isoformat(),
             }
 
         except Exception as e:
@@ -360,7 +371,7 @@ class BackupAgent(BaseAgent):
                 "rto_compliance": await self._test_rto_compliance(),
                 "rpo_compliance": await self._test_rpo_compliance(),
                 "disaster_recovery_plan": await self._test_disaster_recovery_plan(),
-                "business_continuity": await self._test_business_continuity()
+                "business_continuity": await self._test_business_continuity(),
             }
 
             return recovery_tests
@@ -377,7 +388,7 @@ class BackupAgent(BaseAgent):
                 "rto_target_hours": self.recovery_time_objective,
                 "actual_recovery_time_hours": 3.5,
                 "compliant": True,
-                "last_test": (datetime.now() - timedelta(days=14)).isoformat()
+                "last_test": (datetime.now() - timedelta(days=14)).isoformat(),
             }
 
         except Exception as e:
@@ -392,7 +403,7 @@ class BackupAgent(BaseAgent):
                 "rpo_target_hours": self.recovery_point_objective,
                 "actual_data_loss_hours": 0.5,
                 "compliant": True,
-                "last_test": (datetime.now() - timedelta(days=14)).isoformat()
+                "last_test": (datetime.now() - timedelta(days=14)).isoformat(),
             }
 
         except Exception as e:
@@ -407,7 +418,7 @@ class BackupAgent(BaseAgent):
                 "plan_exists": True,
                 "plan_tested": True,
                 "test_success_rate": 0.9,
-                "last_test": (datetime.now() - timedelta(days=30)).isoformat()
+                "last_test": (datetime.now() - timedelta(days=30)).isoformat(),
             }
 
         except Exception as e:
@@ -422,7 +433,7 @@ class BackupAgent(BaseAgent):
                 "continuity_plan_exists": True,
                 "procedures_tested": True,
                 "test_success_rate": 0.85,
-                "last_test": (datetime.now() - timedelta(days=60)).isoformat()
+                "last_test": (datetime.now() - timedelta(days=60)).isoformat(),
             }
 
         except Exception as e:
@@ -430,71 +441,114 @@ class BackupAgent(BaseAgent):
             return {"error": str(e)}
 
     async def _analyze_backup_health(
-        self, backup_status: Dict[str, Any], integrity_checks: Dict[str, Any], recovery_tests: Dict[str, Any]
+        self,
+        backup_status: Dict[str, Any],
+        integrity_checks: Dict[str, Any],
+        recovery_tests: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Analyze overall backup health using Ollama."""
         try:
             # Throttle/caching logic
-            if not hasattr(self, 'analysis_cache'):
+            if not hasattr(self, "analysis_cache"):
                 self.analysis_cache = {}
             cache_ttl = 300  # 5 min
             now = datetime.now()
-            backup_hash = self._backup_hash(backup_status, integrity_checks, recovery_tests)
+            backup_hash = self._backup_hash(
+                backup_status, integrity_checks, recovery_tests
+            )
             cached = self.analysis_cache.get(backup_hash)
-            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            if cached and (
+                now - datetime.fromisoformat(cached["timestamp"])
+            ) < timedelta(seconds=cache_ttl):
                 return cached["result"]
             try:
                 backup_data = {
                     "backup_status": backup_status,
                     "integrity_checks": integrity_checks,
-                    "recovery_tests": recovery_tests
+                    "recovery_tests": recovery_tests,
                 }
-                analysis_result = await ollama_client.analyze_metrics(backup_data, "Backup health analysis")
+                # Truncate prompt if needed
+                prompt_str = truncate_prompt(json.dumps(backup_data), max_tokens=4096)
+                self.logger.debug(f"Ollama prompt length: {estimate_token_count(prompt_str)} tokens")
+                # Validate input data
+                if not isinstance(backup_status, dict) or not isinstance(integrity_checks, dict) or not isinstance(recovery_tests, dict):
+                    self.logger.error("Invalid input data for LLM analysis")
+                    return {"error": "Invalid input data for LLM analysis"}
+                analysis_result = await self.llm_client.analyze_metrics(
+                    backup_data, "Backup health analysis"
+                )
+                if hasattr(analysis_result, "dict"):
+                    analysis_result = analysis_result.dict()
+                if not isinstance(analysis_result, dict):
+                    self.logger.error(f"LLM analysis did not return a dict: {type(analysis_result)}")
+                    return {
+                        "timestamp": now.isoformat(),
+                        "backup_score": self._calculate_backup_score(
+                            backup_status, integrity_checks, recovery_tests
+                        ),
+                        "health_level": "unknown",
+                        "recommendations": [],
+                        "confidence": 0.0,
+                        "analysis": "Analysis failed (invalid LLM result)",
+                    }
                 result = {
                     "timestamp": now.isoformat(),
-                    "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
-                    "health_level": analysis_result.risk_level,
-                    "recommendations": analysis_result.alternatives,
-                    "confidence": analysis_result.confidence,
-                    "analysis": analysis_result.decision
+                    "backup_score": self._calculate_backup_score(
+                        backup_status, integrity_checks, recovery_tests
+                    ),
+                    "health_level": analysis_result.get("risk_level", "unknown"),
+                    "recommendations": analysis_result.get("alternatives", []),
+                    "confidence": analysis_result.get("confidence", 0.0),
+                    "analysis": analysis_result.get("decision", "Analysis failed"),
                 }
-                self.analysis_cache[backup_hash] = {"result": result, "timestamp": now.isoformat()}
+                self.analysis_cache[backup_hash] = {
+                    "result": result,
+                    "timestamp": now.isoformat(),
+                }
                 return result
             except Exception as e:
                 self.logger.error(f"Failed to analyze backup health: {e}")
                 return {
                     "timestamp": now.isoformat(),
-                    "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
+                    "backup_score": self._calculate_backup_score(
+                        backup_status, integrity_checks, recovery_tests
+                    ),
                     "health_level": "unknown",
                     "recommendations": [],
                     "confidence": 0.0,
-                    "analysis": "Analysis failed"
+                    "analysis": "Analysis failed",
                 }
-
         except Exception as e:
             self.logger.error(f"Failed to analyze backup health: {e}")
             return {
                 "timestamp": datetime.now().isoformat(),
-                "backup_score": self._calculate_backup_score(backup_status, integrity_checks, recovery_tests),
+                "backup_score": self._calculate_backup_score(
+                    backup_status, integrity_checks, recovery_tests
+                ),
                 "health_level": "unknown",
                 "recommendations": [],
                 "confidence": 0.0,
-                "analysis": "Analysis failed"
+                "analysis": "Analysis failed",
             }
 
     def _calculate_backup_score(
-        self, backup_status: Dict[str, Any], integrity_checks: Dict[str, Any], recovery_tests: Dict[str, Any]
+        self,
+        backup_status: Dict[str, Any],
+        integrity_checks: Dict[str, Any],
+        recovery_tests: Dict[str, Any],
     ) -> float:
         """Calculate overall backup health score (0-100)."""
         try:
             score = 100.0
-            
+
             # Check backup job status
             backup_jobs = backup_status.get("backup_jobs", [])
-            failed_jobs = sum(1 for job in backup_jobs if job.get("status") != "completed")
+            failed_jobs = sum(
+                1 for job in backup_jobs if job.get("status") != "completed"
+            )
             if failed_jobs > 0:
                 score -= failed_jobs * 10
-            
+
             # Check backup storage
             storage_status = backup_status.get("backup_storage", {})
             for destination, status in storage_status.items():
@@ -502,21 +556,21 @@ class BackupAgent(BaseAgent):
                     score -= 15
                 elif isinstance(status, dict) and status.get("usage_percent", 0) > 90:
                     score -= 10
-            
+
             # Check integrity
             file_integrity = integrity_checks.get("file_integrity", {})
             if not file_integrity.get("checksum_validation", True):
                 score -= 20
-            
+
             # Check recovery tests
             rto_test = recovery_tests.get("rto_compliance", {})
             if not rto_test.get("compliant", True):
                 score -= 15
-            
+
             rpo_test = recovery_tests.get("rpo_compliance", {})
             if not rpo_test.get("compliant", True):
                 score -= 15
-            
+
             return max(0.0, score)
 
         except Exception as e:
@@ -524,81 +578,96 @@ class BackupAgent(BaseAgent):
             return 50.0
 
     async def _detect_backup_issues(
-        self, backup_status: Dict[str, Any], integrity_checks: Dict[str, Any], recovery_tests: Dict[str, Any]
+        self,
+        backup_status: Dict[str, Any],
+        integrity_checks: Dict[str, Any],
+        recovery_tests: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Detect backup issues."""
         issues = []
-        
+
         try:
             # Check for failed backup jobs
             backup_jobs = backup_status.get("backup_jobs", [])
             for job in backup_jobs:
                 if job.get("status") != "completed":
-                    issues.append({
-                        "type": "backup_job_failed",
-                        "severity": "high",
-                        "description": f"Backup job failed: {job.get('name', 'Unknown')}",
-                        "job_name": job.get("name"),
-                        "status": job.get("status"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-            
+                    issues.append(
+                        {
+                            "type": "backup_job_failed",
+                            "severity": "high",
+                            "description": f"Backup job failed: {job.get('name', 'Unknown')}",
+                            "job_name": job.get("name"),
+                            "status": job.get("status"),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+
             # Check for storage issues
             storage_status = backup_status.get("backup_storage", {})
             for destination, status in storage_status.items():
                 if isinstance(status, dict) and not status.get("available", True):
-                    issues.append({
-                        "type": "backup_storage_unavailable",
-                        "severity": "critical",
-                        "description": f"Backup storage unavailable: {destination}",
-                        "destination": destination,
-                        "error": status.get("error", "Unknown error"),
-                        "timestamp": datetime.now().isoformat()
-                    })
+                    issues.append(
+                        {
+                            "type": "backup_storage_unavailable",
+                            "severity": "critical",
+                            "description": f"Backup storage unavailable: {destination}",
+                            "destination": destination,
+                            "error": status.get("error", "Unknown error"),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
                 elif isinstance(status, dict) and status.get("usage_percent", 0) > 90:
-                    issues.append({
-                        "type": "backup_storage_full",
-                        "severity": "high",
-                        "description": f"Backup storage nearly full: {destination}",
-                        "destination": destination,
-                        "usage_percent": status.get("usage_percent"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-            
+                    issues.append(
+                        {
+                            "type": "backup_storage_full",
+                            "severity": "high",
+                            "description": f"Backup storage nearly full: {destination}",
+                            "destination": destination,
+                            "usage_percent": status.get("usage_percent"),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+
             # Check for integrity issues
             file_integrity = integrity_checks.get("file_integrity", {})
             if not file_integrity.get("checksum_validation", True):
-                issues.append({
-                    "type": "backup_integrity_failed",
-                    "severity": "critical",
-                    "description": "Backup file integrity check failed",
-                    "corrupted_files": file_integrity.get("corrupted_files", 0),
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "backup_integrity_failed",
+                        "severity": "critical",
+                        "description": "Backup file integrity check failed",
+                        "corrupted_files": file_integrity.get("corrupted_files", 0),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             # Check for recovery issues
             rto_test = recovery_tests.get("rto_compliance", {})
             if not rto_test.get("compliant", True):
-                issues.append({
-                    "type": "rto_non_compliant",
-                    "severity": "high",
-                    "description": "Recovery Time Objective not met",
-                    "target_hours": rto_test.get("rto_target_hours"),
-                    "actual_hours": rto_test.get("actual_recovery_time_hours"),
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "rto_non_compliant",
+                        "severity": "high",
+                        "description": "Recovery Time Objective not met",
+                        "target_hours": rto_test.get("rto_target_hours"),
+                        "actual_hours": rto_test.get("actual_recovery_time_hours"),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             rpo_test = recovery_tests.get("rpo_compliance", {})
             if not rpo_test.get("compliant", True):
-                issues.append({
-                    "type": "rpo_non_compliant",
-                    "severity": "high",
-                    "description": "Recovery Point Objective not met",
-                    "target_hours": rpo_test.get("rpo_target_hours"),
-                    "actual_hours": rpo_test.get("actual_data_loss_hours"),
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                issues.append(
+                    {
+                        "type": "rpo_non_compliant",
+                        "severity": "high",
+                        "description": "Recovery Point Objective not met",
+                        "target_hours": rpo_test.get("rpo_target_hours"),
+                        "actual_hours": rpo_test.get("actual_data_loss_hours"),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+
             return issues
 
         except Exception as e:
@@ -610,7 +679,7 @@ class BackupAgent(BaseAgent):
         try:
             for issue in issues:
                 issue_type = issue.get("type")
-                
+
                 if issue_type == "backup_job_failed":
                     await self._restart_backup_job(issue)
                 elif issue_type == "backup_storage_unavailable":
@@ -623,9 +692,11 @@ class BackupAgent(BaseAgent):
                     await self._optimize_recovery_time(issue)
                 elif issue_type == "rpo_non_compliant":
                     await self._optimize_recovery_point(issue)
-                
+
                 # Log the remediation action
-                self.logger.warning(f"Backup remediation performed for {issue_type}: {issue.get('description')}")
+                self.logger.warning(
+                    f"Backup remediation performed for {issue_type}: {issue.get('description')}"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to perform backup remediation: {e}")
@@ -635,7 +706,7 @@ class BackupAgent(BaseAgent):
         try:
             job_name = issue.get("job_name")
             self.logger.info(f"Would restart backup job: {job_name}")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to restart backup job: {e}")
 
@@ -644,7 +715,7 @@ class BackupAgent(BaseAgent):
         try:
             destination = issue.get("destination")
             self.logger.info(f"Would fix backup storage: {destination}")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to fix backup storage: {e}")
 
@@ -653,7 +724,7 @@ class BackupAgent(BaseAgent):
         try:
             destination = issue.get("destination")
             self.logger.info(f"Would cleanup backup storage: {destination}")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to cleanup backup storage: {e}")
 
@@ -661,7 +732,7 @@ class BackupAgent(BaseAgent):
         """Fix backup integrity issues."""
         try:
             self.logger.info("Would fix backup integrity issues")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to fix backup integrity: {e}")
 
@@ -669,7 +740,7 @@ class BackupAgent(BaseAgent):
         """Optimize recovery time."""
         try:
             self.logger.info("Would optimize recovery time")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to optimize recovery time: {e}")
 
@@ -677,49 +748,58 @@ class BackupAgent(BaseAgent):
         """Optimize recovery point."""
         try:
             self.logger.info("Would optimize recovery point")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to optimize recovery point: {e}")
 
     async def _update_backup_status(
-        self, backup_status: Dict[str, Any], integrity_checks: Dict[str, Any], 
-        recovery_tests: Dict[str, Any], analysis: Dict[str, Any], issues: List[Dict[str, Any]]
+        self,
+        backup_status: Dict[str, Any],
+        integrity_checks: Dict[str, Any],
+        recovery_tests: Dict[str, Any],
+        analysis: Dict[str, Any],
+        issues: List[Dict[str, Any]],
     ):
         """Update backup status."""
         try:
-            self.backup_status.append({
-                "timestamp": datetime.now().isoformat(),
-                "backup_status": backup_status,
-                "integrity_checks": integrity_checks,
-                "recovery_tests": recovery_tests,
-                "analysis": analysis,
-                "issues": issues
-            })
-            
+            self.backup_status.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "backup_status": backup_status,
+                    "integrity_checks": integrity_checks,
+                    "recovery_tests": recovery_tests,
+                    "analysis": analysis,
+                    "issues": issues,
+                }
+            )
+
             # Keep only recent status
             if len(self.backup_status) > 100:
                 self.backup_status = self.backup_status[-100:]
-            
+
             # Update recovery tests
-            self.recovery_tests.append({
-                "timestamp": datetime.now().isoformat(),
-                "tests": recovery_tests
-            })
+            self.recovery_tests.append(
+                {"timestamp": datetime.now().isoformat(), "tests": recovery_tests}
+            )
             if len(self.recovery_tests) > 50:
                 self.recovery_tests = self.recovery_tests[-50:]
-            
+
             # Update backup issues
             if issues:
                 self.backup_issues.extend(issues)
                 if len(self.backup_issues) > 50:
                     self.backup_issues = self.backup_issues[-50:]
-            
+
         except Exception as e:
             self.logger.error(f"Failed to update backup status: {e}")
 
     async def _broadcast_backup_status(
-        self, backup_status: Dict[str, Any], integrity_checks: Dict[str, Any], 
-        recovery_tests: Dict[str, Any], analysis: Dict[str, Any], issues: List[Dict[str, Any]]
+        self,
+        backup_status: Dict[str, Any],
+        integrity_checks: Dict[str, Any],
+        recovery_tests: Dict[str, Any],
+        analysis: Dict[str, Any],
+        issues: List[Dict[str, Any]],
     ):
         """Broadcast backup status to other agents."""
         try:
@@ -731,23 +811,23 @@ class BackupAgent(BaseAgent):
                 "issues": issues,
                 "backup_score": analysis.get("backup_score", 0),
                 "health_level": analysis.get("health_level", "unknown"),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             await self.message_bus.broadcast(
                 sender=self.agent_name,
                 message_type=MessageType.BACKUP_UPDATE,
                 content=backup_status_msg,
-                priority=MessagePriority.HIGH if issues else MessagePriority.NORMAL
+                priority=MessagePriority.HIGH if issues else MessagePriority.NORMAL,
             )
-            
+
         except Exception as e:
             self.logger.error(f"Failed to broadcast backup status: {e}")
 
     async def _setup_subscriptions(self):
         """Set up message subscriptions for the backup agent."""
         await super()._setup_subscriptions()
-        
+
         # Subscribe to backup-related messages
         await self.message_bus.subscribe(MessageType.ALERT, self._handle_backup_alert)
         self.subscribed_message_types.append(MessageType.ALERT)
@@ -756,11 +836,13 @@ class BackupAgent(BaseAgent):
         """Handle backup-related alerts."""
         if message.sender == self.agent_name:
             return  # Ignore our own messages
-        
+
         # Process backup alerts
         alert_content = message.content
         if "backup" in alert_content.get("type", "").lower():
-            self.logger.warning(f"Backup alert received: {alert_content.get('message', 'Unknown alert')}")
+            self.logger.warning(
+                f"Backup alert received: {alert_content.get('message', 'Unknown alert')}"
+            )
 
     def get_backup_summary(self) -> Dict[str, Any]:
         """Get a summary of backup status."""
@@ -771,5 +853,5 @@ class BackupAgent(BaseAgent):
             "recent_issues": self.backup_issues[-5:] if self.backup_issues else [],
             "backup_sources": self.backup_sources,
             "backup_destinations": self.backup_destinations,
-            "backup_schedule": self.backup_schedule
-        } 
+            "backup_schedule": self.backup_schedule,
+        }

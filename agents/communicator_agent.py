@@ -131,8 +131,12 @@ class CommunicatorAgent(BaseAgent):
                 "health_indicators": await self._get_health_indicators(),
                 "performance_metrics": await self._get_performance_metrics(),
                 "active_issues": self._get_active_issues(),
-                "llm_quota_alert_active": getattr(self, "llm_quota_alert_active", False),
-                "llm_quota_alert_message": getattr(self, "llm_quota_alert_message", None),
+                "llm_quota_alert_active": getattr(
+                    self, "llm_quota_alert_active", False
+                ),
+                "llm_quota_alert_message": getattr(
+                    self, "llm_quota_alert_message", None
+                ),
             }
 
             # Store summary
@@ -504,8 +508,12 @@ class CommunicatorAgent(BaseAgent):
 
         if alert_type == "llm_quota_cleared":
             self.clear_llm_quota_alert()
-            self.logger.info("LLM quota alert cleared. System will resume normal LLM usage.")
-            self.add_user_notification(alert_message, notification_type="info", severity="info")
+            self.logger.info(
+                "LLM quota alert cleared. System will resume normal LLM usage."
+            )
+            self.add_user_notification(
+                alert_message, notification_type="info", severity="info"
+            )
             return
 
         if severity in ["critical", "high"]:

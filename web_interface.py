@@ -11,11 +11,14 @@ import sys
 import psutil
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import re
+import functools
+import logging
+import traceback
 
 from system_orchestrator import orchestrator
 from utils.message_bus import message_bus
@@ -29,10 +32,11 @@ app = FastAPI(
 )
 
 # Global state
-system_running = False
+system_running: bool = False
 startup_task = None
-startup_time = None
-system_ready = False
+startup_time: Optional[float] = None
+system_ready: bool = False
+startup_error: Optional[str] = None
 
 # Performance monitoring
 performance_cache = {}
@@ -47,18 +51,20 @@ startup_validation = {
     "agents": False,
     "llm_provider": False,
     "file_permissions": False,
-    "system_resources": False
+    "system_resources": False,
 }
+
 
 async def validate_startup_requirements():
     """Validate all startup requirements and log results."""
     global startup_validation
-    
+
     print("🔍 Starting system validation...")
-    
+
     # 1. Check file permissions
     try:
         import os
+
         log_dir = os.path.dirname(config.logging.log_file)
         os.makedirs(log_dir, exist_ok=True)
         with open(config.logging.log_file, "a") as f:
@@ -67,29 +73,32 @@ async def validate_startup_requirements():
         print("✅ File permissions validated")
     except Exception as e:
         print(f"❌ File permissions failed: {e}")
-    
+
     # 2. Check system resources
     try:
         memory = psutil.virtual_memory()
-        disk = psutil.disk_usage('C:\\' if sys.platform == 'win32' else '/')
-        if memory.available > 500 * 1024 * 1024 and disk.free > 1 * 1024 * 1024 * 1024:  # 500MB RAM, 1GB disk
+        disk = psutil.disk_usage("C:\\" if sys.platform == "win32" else "/")
+        if (
+            memory.available > 500 * 1024 * 1024 and disk.free > 1 * 1024 * 1024 * 1024
+        ):  # 500MB RAM, 1GB disk
             startup_validation["system_resources"] = True
             print("✅ System resources sufficient")
         else:
             print("⚠️ System resources low")
     except Exception as e:
         print(f"❌ System resource check failed: {e}")
-    
+
     # 3. Check database
     try:
         from utils.persistence import PersistenceManager
+
         persistence = PersistenceManager()
         await persistence.initialize()
         startup_validation["database"] = True
         print("✅ Database initialized")
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
-    
+
     # 4. Check message bus
     try:
         await message_bus.start()
@@ -97,10 +106,11 @@ async def validate_startup_requirements():
         print("✅ Message bus started")
     except Exception as e:
         print(f"❌ Message bus failed: {e}")
-    
+
     # 5. Check LLM provider
     try:
         from utils.ollama_client import ollama_client
+
         if await ollama_client.health_check():
             startup_validation["llm_provider"] = True
             print("✅ LLM provider (Ollama) available")
@@ -108,123 +118,144 @@ async def validate_startup_requirements():
             print("⚠️ LLM provider not available - will use fallback")
     except Exception as e:
         print(f"⚠️ LLM provider check failed: {e}")
-    
+
     # 6. Validate agents can be created
     try:
-        from agents import SensorAgent, AnalyzerAgent, RemediatorAgent, CommunicatorAgent
+        from agents import (
+            SensorAgent,
+            AnalyzerAgent,
+            RemediatorAgent,
+            CommunicatorAgent,
+        )
+
         test_agents = {
             "sensor": SensorAgent(),
             "analyzer": AnalyzerAgent(),
             "remediator": RemediatorAgent(),
-            "communicator": CommunicatorAgent()
+            "communicator": CommunicatorAgent(),
         }
         startup_validation["agents"] = True
         print("✅ Agent classes validated")
     except Exception as e:
         print(f"❌ Agent validation failed: {e}")
-    
+
     # Summary
     all_valid = all(startup_validation.values())
     print(f"\n📊 Startup Validation Summary:")
     for check, status in startup_validation.items():
         status_icon = "✅" if status else "❌"
         print(f"   {status_icon} {check}: {'PASS' if status else 'FAIL'}")
-    
+
     if all_valid:
         print("🎉 All startup requirements validated successfully!")
     else:
-        print("⚠️ Some startup requirements failed - system may have limited functionality")
-    
+        print(
+            "⚠️ Some startup requirements failed - system may have limited functionality"
+        )
+
     return all_valid
+
 
 async def monitor_system_performance():
     """Monitor system performance and cache results."""
     global performance_cache, last_health_check
-    
+
     while system_running:
         try:
             current_time = time.time()
-            
+
             # System metrics
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
+            disk = psutil.disk_usage("/")
+
             performance_cache["system_metrics"] = {
                 "cpu_percent": cpu_percent,
                 "memory_percent": memory.percent,
                 "memory_available": memory.available,
                 "disk_percent": disk.percent,
                 "disk_free": disk.free,
-                "timestamp": current_time
+                "timestamp": current_time,
             }
-            
+
             # Agent health check (cached)
-            if not last_health_check or (current_time - last_health_check) > health_check_interval:
+            if (
+                not last_health_check
+                or (current_time - last_health_check) > health_check_interval
+            ):
                 try:
                     agent_health = {}
                     for name, agent in orchestrator.agents.items():
-                        if hasattr(agent, 'health_status'):
+                        if hasattr(agent, "health_status"):
                             agent_health[name] = {
                                 "status": agent.health_status,
-                                "running": getattr(agent, 'running', False),
-                                "uptime": getattr(agent, 'uptime', 0)
+                                "running": getattr(agent, "running", False),
+                                "uptime": getattr(agent, "uptime", 0),
                             }
-                    
+
                     performance_cache["agent_health"] = agent_health
                     performance_cache["agent_health_timestamp"] = current_time
                     last_health_check = current_time
                 except Exception as e:
                     print(f"Warning: Agent health check failed: {e}")
-            
+
             await asyncio.sleep(10)  # Update every 10 seconds
-            
+
         except Exception as e:
             print(f"Performance monitoring error: {e}")
             await asyncio.sleep(30)
 
-def get_cached_data(key: str, max_age: int = None):
+
+def get_cached_data(key: str, max_age: Optional[int] = None):
     """Get cached data if it's still valid."""
     if key not in performance_cache:
         return None
-    
+
     data = performance_cache[key]
     if max_age is None:
-        max_age = cache_ttl
-    
+        max_age = 60
+
     if time.time() - data.get("timestamp", 0) > max_age:
         return None
-    
+
     return data
+
+
+async def background_init():
+    global system_ready, startup_error, system_running, startup_task, startup_time
+    try:
+        validation_passed = await validate_startup_requirements()
+        if validation_passed:
+            try:
+                # Start performance monitoring
+                asyncio.create_task(monitor_system_performance())
+                # Start the orchestrator
+                startup_task = asyncio.create_task(start_system())
+                system_running = True
+                system_ready = True
+                elapsed = (time.time() - startup_time) if startup_time is not None else 0
+                print(f"✅ System started successfully in {elapsed:.2f} seconds")
+            except Exception as e:
+                print(f"❌ System startup failed: {e}")
+                startup_error = str(e)
+                system_ready = False
+        else:
+            print("⚠️ System started with limited functionality due to validation failures")
+            startup_error = "Startup validation failed"
+            system_ready = False
+    except Exception as e:
+        startup_error = str(e)
+        system_ready = False
+
 
 @app.on_event("startup")
 async def startup_event():
-    """Start the multi-agent system when the web interface starts."""
-    global system_running, startup_task, startup_time, system_ready
-
+    global startup_time
     startup_time = time.time()
     print("🚀 Starting Multi-Agent System...")
-    
-    # Validate startup requirements
-    validation_passed = await validate_startup_requirements()
-    
-    if validation_passed:
-        try:
-            # Start performance monitoring
-            asyncio.create_task(monitor_system_performance())
-            
-            # Start the orchestrator
-            startup_task = asyncio.create_task(start_system())
-            system_running = True
-            system_ready = True
-            
-            print(f"✅ System started successfully in {time.time() - startup_time:.2f} seconds")
-        except Exception as e:
-            print(f"❌ System startup failed: {e}")
-            system_ready = False
-    else:
-        print("⚠️ System started with limited functionality due to validation failures")
-        system_ready = False
+    # Launch background initialization (do not await)
+    asyncio.create_task(background_init())
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -237,6 +268,7 @@ async def shutdown_event():
         system_running = False
         print("✅ System shutdown complete")
 
+
 async def start_system():
     """Start the multi-agent system in the background."""
     global system_running
@@ -248,6 +280,7 @@ async def start_system():
         print(f"❌ Failed to start system: {e}")
         system_running = False
 
+
 # Performance monitoring endpoints
 @app.get("/api/performance")
 async def get_performance_metrics():
@@ -256,35 +289,37 @@ async def get_performance_metrics():
         cached_metrics = get_cached_data("system_metrics")
         if cached_metrics:
             return cached_metrics
-        
+
         # Fallback to real-time metrics
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
-        
+        disk = psutil.disk_usage("/")
+
         return {
             "cpu_percent": cpu_percent,
             "memory_percent": memory.percent,
             "memory_available": memory.available,
             "disk_percent": disk.percent,
             "disk_free": disk.free,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/startup/status")
 async def get_startup_status():
     """Get startup validation status."""
     global startup_validation, system_ready, startup_time
-    
+
     return {
         "system_ready": system_ready,
         "startup_time": startup_time,
         "uptime": time.time() - startup_time if startup_time else 0,
         "validation": startup_validation,
-        "all_valid": all(startup_validation.values())
+        "all_valid": all(startup_validation.values()),
     }
+
 
 @app.get("/api/startup/diagnostics")
 async def get_startup_diagnostics():
@@ -295,52 +330,57 @@ async def get_startup_diagnostics():
                 "platform": sys.platform,
                 "python_version": sys.version,
                 "cpu_count": psutil.cpu_count() or 1,
-                "memory_total": psutil.virtual_memory().total
+                "memory_total": psutil.virtual_memory().total,
             },
             "file_system": {},
             "network": {},
-            "processes": {}
+            "processes": {},
         }
-        
+
         # Check file system
         try:
             import os
+
             log_dir = os.path.dirname(config.logging.log_file)
             diagnostics["file_system"]["log_directory"] = {
                 "exists": os.path.exists(log_dir),
-                "writable": os.access(log_dir, os.W_OK) if os.path.exists(log_dir) else False,
-                "path": log_dir
+                "writable": (
+                    os.access(log_dir, os.W_OK) if os.path.exists(log_dir) else False
+                ),
+                "path": log_dir,
             }
         except Exception as e:
             diagnostics["file_system"]["error"] = str(e)
-        
+
         # Check network
         try:
             import socket
+
             diagnostics["network"]["localhost"] = {
                 "reachable": True,
-                "port_8002": False
+                "port_8002": False,
             }
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('localhost', 8002))
-            diagnostics["network"]["localhost"]["port_8002"] = (result == 0)
+            result = sock.connect_ex(("localhost", 8002))
+            diagnostics["network"]["localhost"]["port_8002"] = result == 0
             sock.close()
         except Exception as e:
             diagnostics["network"]["error"] = str(e)
-        
+
         # Check processes
         try:
             diagnostics["processes"]["current"] = {
                 "pid": os.getpid(),
                 "memory_usage": psutil.Process().memory_info().rss,
-                "cpu_percent": psutil.Process().cpu_percent()
+                "cpu_percent": psutil.Process().cpu_percent(),
             }
         except Exception as e:
             diagnostics["processes"]["error"] = str(e)
-        
+
         return diagnostics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # API Routes
 
@@ -686,9 +726,26 @@ async def root():
             html {
                 scroll-behavior: smooth;
             }
+            /* --- Accessibility: Skip to Content --- */
+            .skip-link {
+                position: absolute;
+                left: -999px;
+                top: 10px;
+                background: var(--primary);
+                color: #fff;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                z-index: 10000;
+                font-weight: 600;
+                transition: left 0.2s;
+            }
+            .skip-link:focus {
+                left: 1rem;
+            }
         </style>
     </head>
     <body>
+        <a href="#dashboard" class="skip-link" tabindex="0">Skip to main content</a>
         <button class="hamburger" aria-label="Open navigation" aria-controls="main-nav" aria-expanded="false" tabindex="0">
             <i class="fas fa-bars"></i>
         </button>
@@ -702,14 +759,16 @@ async def root():
                 <li><a href="#settings" tabindex="0"><i class="fas fa-cog"></i>&nbsp;Settings</a></li>
             </ul>
         </nav>
-        <main>
-            <div id="dashboard" class="dashboard-header">
+        <main id="dashboard" tabindex="-1">
+            <div class="dashboard-header">
                 <h1>System Dashboard</h1>
                 <div class="actions">
                     <button id="darkModeToggle" class="btn" aria-label="Toggle dark mode">Dark Mode</button>
                     <button id="refreshBtn" class="btn info" aria-label="Refresh dashboard"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
             </div>
+            <!-- Accessibility: Banner for critical alerts -->
+            <div id="critical-banner" style="display:none;background:var(--danger);color:#fff;padding:1rem 2rem;border-radius:12px;margin-bottom:1.5rem;font-weight:600;" role="alert" aria-live="assertive"></div>
             
             <!-- Quick Actions -->
             <section class="glass-card" aria-label="Quick Actions">
@@ -1558,6 +1617,35 @@ async def root():
                 link.classList.toggle('active', link.getAttribute('href') === current);
             });
         });
+
+        // --- Banner for critical alerts ---
+        function showCriticalBanner(message) {
+            const banner = document.getElementById('critical-banner');
+            if (banner) {
+                banner.textContent = message;
+                banner.style.display = 'block';
+            }
+        }
+        function hideCriticalBanner() {
+            const banner = document.getElementById('critical-banner');
+            if (banner) banner.style.display = 'none';
+        }
+        // --- API error handling: show banner for critical errors ---
+        async function safeFetch(url, opts) {
+            try {
+                const res = await fetch(url, opts);
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (res.status >= 500) showCriticalBanner(data.error || 'Internal server error');
+                    throw new Error(data.error || res.statusText);
+                }
+                hideCriticalBanner();
+                return await res.json();
+            } catch (e) {
+                showCriticalBanner(e.message || 'Network error');
+                throw e;
+            }
+        }
         </script>
     </body>
     </html>
@@ -1572,9 +1660,9 @@ async def get_system_info():
         cached_data = get_cached_data("system_info", max_age=15)  # 15 second cache
         if cached_data:
             return cached_data
-        
+
         info = orchestrator.get_system_info()
-        
+
         # Compose system_overview for the dashboard with fallback values
         system_overview = {
             "cpu_usage": 0,
@@ -1582,7 +1670,7 @@ async def get_system_info():
             "running_agents": info.get("running_agents", 0),
             "total_agents": info.get("total_agents", 0),
         }
-        
+
         # Try to get metrics from sensor agent if available
         try:
             sensor_agent = orchestrator.agents.get("sensor")
@@ -1598,7 +1686,7 @@ async def get_system_info():
         except Exception as e:
             # Log but don't fail the entire endpoint
             print(f"Warning: Could not get sensor metrics: {e}")
-        
+
         # Add active issues if available from analyzer
         active_issues = []
         try:
@@ -1614,14 +1702,14 @@ async def get_system_info():
         except Exception as e:
             # Log but don't fail the entire endpoint
             print(f"Warning: Could not get analyzer issues: {e}")
-        
+
         info["system_overview"] = system_overview
         info["active_issues"] = active_issues
         info["cached_at"] = time.time()
-        
+
         # Cache the result
         performance_cache["system_info"] = info
-        
+
         return info
     except Exception as e:
         # Return a minimal response instead of 500 error
@@ -1634,7 +1722,7 @@ async def get_system_info():
             },
             "active_issues": [],
             "error": f"System information temporarily unavailable: {str(e)}",
-            "cached_at": time.time()
+            "cached_at": time.time(),
         }
 
 
@@ -1646,7 +1734,7 @@ async def get_agents():
         cached_data = get_cached_data("agents_status", max_age=10)  # 10 second cache
         if cached_data:
             return cached_data
-        
+
         agents = {}
         for agent_name, agent in orchestrator.agents.items():
             stats = orchestrator.get_agent_stats(agent_name)
@@ -1658,13 +1746,10 @@ async def get_agents():
                     "check_count": stats.get("check_count", 0),
                     "error_count": stats.get("error_count", 0),
                 }
-        
+
         # Cache the result
-        performance_cache["agents_status"] = {
-            **agents,
-            "cached_at": time.time()
-        }
-        
+        performance_cache["agents_status"] = {**agents, "cached_at": time.time()}
+
         return agents
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1672,48 +1757,51 @@ async def get_agents():
 
 @app.get("/api/metrics")
 async def get_current_metrics():
-    """Get current system metrics with caching."""
-    try:
-        # Check cache first
-        cached_data = get_cached_data("current_metrics", max_age=5)  # 5 second cache
-        if cached_data:
-            return cached_data
-        
-        # Get metrics from sensor agent if available
-        sensor_agent = orchestrator.agents.get("sensor")
-        if sensor_agent and hasattr(sensor_agent, "get_current_metrics"):
+    """Get current system metrics with caching and robust error handling."""
+    logger = logging.getLogger("web_interface.api.metrics")
+    def ensure_floats(obj):
+        if isinstance(obj, dict):
+            return {k: ensure_floats(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [ensure_floats(v) for v in obj]
+        elif isinstance(obj, str):
             try:
-                metrics = sensor_agent.get_current_metrics()
-                if metrics:
-                    metrics["cached_at"] = time.time()
-                    # Cache the result
-                    performance_cache["current_metrics"] = metrics
-                    return metrics
-            except Exception as e:
-                print(f"Warning: Sensor agent metrics failed: {e}")
-        
-        # Fallback to basic system metrics
-        try:
-            import psutil
-            fallback_metrics = {
-                "cpu": {"usage_percent": psutil.cpu_percent(interval=1)},
-                "memory": {"usage_percent": psutil.virtual_memory().percent},
-                "disk": {"usage_percent": psutil.disk_usage('C:\\').percent if sys.platform == 'win32' else psutil.disk_usage('/').percent},
-                "cached_at": time.time()
-            }
-        except Exception as e:
-            fallback_metrics = {
+                if obj.replace('.', '', 1).isdigit():
+                    return float(obj)
+            except Exception:
+                pass
+            return obj
+        else:
+            return obj
+    try:
+        metrics = get_cached_data("metrics")
+        no_data = False
+        if metrics is None:
+            sensor_agent = None
+            try:
+                from system_orchestrator import orchestrator
+                sensor_agent = getattr(orchestrator, "agents", {}).get("sensor")
+            except Exception:
+                sensor_agent = None
+            if sensor_agent and hasattr(sensor_agent, "get_current_metrics"):
+                metrics = sensor_agent.get_current_metrics() or {}
+            else:
+                from agents.sensor_agent import SensorAgent
+                metrics = SensorAgent().get_current_metrics() or {}
+        metrics = ensure_floats(metrics)
+        # Ensure structure
+        if not metrics or not isinstance(metrics, dict) or "cpu" not in metrics or "memory" not in metrics:
+            logger.warning("/api/metrics: No valid metrics found, returning fallback structure.")
+            metrics = {
                 "cpu": {"usage_percent": 0},
                 "memory": {"usage_percent": 0},
-                "disk": {"usage_percent": 0},
-                "error": str(e),
-                "cached_at": time.time()
+                "no_data": True
             }
-        
-        performance_cache["current_metrics"] = fallback_metrics
-        return fallback_metrics
+        return metrics
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        tb = traceback.format_exc()
+        logger.error(f"/api/metrics error: {e}\n{tb}")
+        return {"error": str(e), "details": tb, "no_data": True}, 500
 
 
 @app.get("/api/health")
@@ -1724,15 +1812,21 @@ async def health_check():
         cached_data = get_cached_data("health_check", max_age=30)  # 30 second cache
         if cached_data:
             return cached_data
-        
+
         # Get basic health data
         try:
-            agents_running = sum(
-                1 for agent in orchestrator.agents.values() if getattr(agent, "running", False)
-            ) if hasattr(orchestrator, "agents") else 0
+            agents_running = (
+                sum(
+                    1
+                    for agent in orchestrator.agents.values()
+                    if getattr(agent, "running", False)
+                )
+                if hasattr(orchestrator, "agents")
+                else 0
+            )
         except Exception:
             agents_running = 0
-        
+
         health_data = {
             "status": "healthy" if system_running else "unhealthy",
             "timestamp": datetime.now().isoformat(),
@@ -1740,12 +1834,12 @@ async def health_check():
             "agents_running": agents_running,
             "system_ready": system_ready,
             "uptime": time.time() - startup_time if startup_time else 0,
-            "cached_at": time.time()
+            "cached_at": time.time(),
         }
-        
+
         # Cache the result
         performance_cache["health_check"] = health_data
-        
+
         return health_data
     except Exception as e:
         # Return a basic health response even if there's an error
@@ -1754,7 +1848,7 @@ async def health_check():
             "timestamp": datetime.now().isoformat(),
             "error": str(e),
             "system_ready": False,
-            "agents_running": 0
+            "agents_running": 0,
         }
 
 
@@ -1809,9 +1903,17 @@ async def send_command(command_data: Dict[str, Any]):
 
         result = await orchestrator.send_command(command, target)
         if result and result.get("status") == "success":
-            return {"status": "success", "message": f"Command '{command}' sent to {target}", "result": result}
+            return {
+                "status": "success",
+                "message": f"Command '{command}' sent to {target}",
+                "result": result,
+            }
         else:
-            return {"status": "error", "message": result.get("error", "Unknown error"), "result": result}
+            return {
+                "status": "error",
+                "message": result.get("error", "Unknown error"),
+                "result": result,
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1857,31 +1959,33 @@ async def update_configuration(config_data: Dict[str, Any]):
             if "memory_warning" in thresholds:
                 config.update_threshold("memory_warning", thresholds["memory_warning"])
             if "memory_critical" in thresholds:
-                config.update_threshold("memory_critical", thresholds["memory_critical"])
+                config.update_threshold(
+                    "memory_critical", thresholds["memory_critical"]
+                )
             if "disk_warning" in thresholds:
                 config.update_threshold("disk_warning", thresholds["disk_warning"])
             if "disk_critical" in thresholds:
                 config.update_threshold("disk_critical", thresholds["disk_critical"])
-        
+
         # Update agent configuration
         if "agent_config" in config_data:
             agent_config = config_data["agent_config"]
             if "sensor" in agent_config and "check_interval" in agent_config["sensor"]:
                 sensor_config = config.get_agent_config("sensor")
                 sensor_config.check_interval = agent_config["sensor"]["check_interval"]
-        
+
         # Update logging configuration
         if "logging" in config_data:
             logging_config = config_data["logging"]
             if "log_level" in logging_config:
                 config.logging.log_level = logging_config["log_level"]
-        
+
         # Update web interface configuration
         if "web_interface" in config_data:
             web_config = config_data["web_interface"]
             if "port" in web_config:
                 config.web_port = web_config["port"]
-        
+
         # Update Ollama configuration
         if "ollama" in config_data:
             ollama_config = config_data["ollama"]
@@ -1889,15 +1993,15 @@ async def update_configuration(config_data: Dict[str, Any]):
                 config.ollama.url = ollama_config["url"]
             if "model" in ollama_config:
                 config.ollama.model = ollama_config["model"]
-        
+
         # Update persistence configuration
         if "persistence_enabled" in config_data:
             config.persistence_enabled = config_data["persistence_enabled"]
-        
+
         return {
             "status": "success",
             "message": "Configuration updated successfully",
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1907,59 +2011,68 @@ async def update_configuration(config_data: Dict[str, Any]):
 async def get_logs(limit: int = 100):
     """Get recent system logs with caching and optimized parsing."""
     try:
-        # Check cache first (shorter cache for logs)
-        cached_data = get_cached_data("system_logs", max_age=5)  # 5 second cache
+        cached_data = get_cached_data("system_logs", max_age=5)
         if cached_data:
             return cached_data
-        
         log_path = config.logging.log_file
         logs = []
-        
         try:
             with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-                # Read only the last N lines for performance
                 lines = f.readlines()
                 if len(lines) > limit * 2:
-                    lines = lines[-limit * 2:]  # Get more lines to filter
-            
-            # Optimized log parsing
-            log_pattern = re.compile(r"\[(.*?)\] (DEBUG|INFO|WARNING|ERROR|CRITICAL)\s+([\S]+): (.+)")
-            
+                    lines = lines[-limit * 2 :]
+            log_pattern = re.compile(r"\\[(.*?)\\] (DEBUG|INFO|WARNING|ERROR|CRITICAL)\\s+([\\S]+): (.+)")
+            matched = False
             for line in reversed(lines):
                 match = log_pattern.search(line)
                 if match:
+                    matched = True
                     timestamp, level, agent, message = match.groups()
-                    # Extract emoji and clean agent name
                     emoji = ""
                     agent_name = agent
                     if " " in agent:
                         emoji, agent_name = agent.split(" ", 1)
-                    
                     logs.append({
                         "timestamp": timestamp,
                         "level": level,
                         "agent": agent_name,
                         "emoji": emoji,
                         "message": message.strip(),
-                        "raw_line": line.strip()
+                        "raw_line": line.strip(),
                     })
-                    
                     if len(logs) >= limit:
                         break
-            
-            # Return in chronological order (oldest first)
+            if not matched:
+                logging.getLogger("web_interface.api.logs").warning("/api/logs: No log lines matched regex. Returning fallback entry.")
+                logs.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "level": "INFO",
+                    "agent": "system",
+                    "emoji": "",
+                    "message": "No logs found or log format mismatch.",
+                    "raw_line": "",
+                })
             result = {"logs": list(reversed(logs)), "cached_at": time.time()}
-            
-            # Cache the result
             performance_cache["system_logs"] = result
-            
             return result
-            
         except FileNotFoundError:
-            return {"logs": [], "error": "Log file not found", "cached_at": time.time()}
+            return {"logs": [{
+                "timestamp": datetime.now().isoformat(),
+                "level": "ERROR",
+                "agent": "system",
+                "emoji": "",
+                "message": "Log file not found.",
+                "raw_line": "",
+            }], "error": "Log file not found", "cached_at": time.time()}
         except Exception as e:
-            return {"logs": [], "error": f"Error reading log file: {str(e)}", "cached_at": time.time()}
-            
+            return {"logs": [{
+                "timestamp": datetime.now().isoformat(),
+                "level": "ERROR",
+                "agent": "system",
+                "emoji": "",
+                "message": f"Error reading log file: {str(e)}",
+                "raw_line": "",
+            }], "error": f"Error reading log file: {str(e)}", "cached_at": time.time()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1973,6 +2086,7 @@ async def get_llm_status():
         ollama_models = []
         try:
             from utils.ollama_client import ollama_client
+
             ollama_healthy = await ollama_client.health_check()
             if ollama_healthy:
                 ollama_models = await ollama_client.list_models()
@@ -2022,7 +2136,9 @@ async def get_live_alerts(limit: int = 50):
     alert_levels = ["WARNING", "ERROR", "CRITICAL"]
     alert_lines = []
     # Updated regex to match actual log format: "timestamp - AgentSystem - LEVEL - agent: message"
-    log_pattern = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - AgentSystem - (WARNING|ERROR|CRITICAL) - (.+): (.+)")
+    log_pattern = re.compile(
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - AgentSystem - (WARNING|ERROR|CRITICAL) - (.+): (.+)"
+    )
     try:
         with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
@@ -2036,13 +2152,15 @@ async def get_live_alerts(limit: int = 50):
                 agent_name = agent
                 if " " in agent:
                     emoji, agent_name = agent.split(" ", 1)
-                alert_lines.append({
-                    "timestamp": timestamp,
-                    "severity": severity,
-                    "agent": agent_name,
-                    "emoji": emoji,
-                    "message": message.strip(),
-                })
+                alert_lines.append(
+                    {
+                        "timestamp": timestamp,
+                        "severity": severity,
+                        "agent": agent_name,
+                        "emoji": emoji,
+                        "message": message.strip(),
+                    }
+                )
                 if len(alert_lines) >= limit:
                     break
         # Return in chronological order (oldest first)
@@ -2093,22 +2211,32 @@ async def internal_error_handler(request, exc):
 def start_web_interface():
     """Start the web interface with proper configuration."""
     import uvicorn
-    
+
     # Use config port instead of hardcoded 8002
     port = config.web_port
     host = config.web_host
-    
+
     print(f"🌐 Starting web interface on http://{host}:{port}")
     print(f"📊 Dashboard: http://{host}:{port}/")
     print(f"🔧 API Docs: http://{host}:{port}/docs")
-    
+
     uvicorn.run(
-        "web_interface:app",
-        host=host,
-        port=port,
-        reload=False,
-        log_level="info"
+        "web_interface:app", host=host, port=port, reload=False, log_level="info"
     )
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"ready": system_ready, "error": startup_error}
+
+
+def require_ready(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        if not system_ready:
+            return JSONResponse(status_code=503, content={"status": "starting", "message": "System is starting, please wait."})
+        return await func(*args, **kwargs)
+    return wrapper
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -41,24 +41,22 @@ class ComplianceAgent(BaseAgent):
             "password_policy": {
                 "min_length": 8,
                 "require_complexity": True,
-                "max_age_days": 90
+                "max_age_days": 90,
             },
             "access_control": {
                 "require_mfa": True,
                 "session_timeout_minutes": 30,
-                "max_failed_attempts": 5
+                "max_failed_attempts": 5,
             },
             "data_protection": {
                 "encryption_required": True,
                 "backup_encryption": True,
-                "data_retention_days": 365
-            }
+                "data_retention_days": 365,
+            },
         }
 
         # Regulatory frameworks
-        self.regulatory_frameworks = [
-            "GDPR", "HIPAA", "SOX", "PCI-DSS", "ISO-27001"
-        ]
+        self.regulatory_frameworks = ["GDPR", "HIPAA", "SOX", "PCI-DSS", "ISO-27001"]
 
         # Compliance thresholds
         self.min_compliance_score = 80.0
@@ -76,8 +74,19 @@ class ComplianceAgent(BaseAgent):
         await asyncio.sleep(random.uniform(0, 10))
         await super().start()
 
-    def _compliance_hash(self, security_checks, regulatory_checks, best_practice_checks):
-        return hashlib.sha256(json.dumps({"security": security_checks, "regulatory": regulatory_checks, "best": best_practice_checks}, sort_keys=True).encode()).hexdigest()
+    def _compliance_hash(
+        self, security_checks, regulatory_checks, best_practice_checks
+    ):
+        return hashlib.sha256(
+            json.dumps(
+                {
+                    "security": security_checks,
+                    "regulatory": regulatory_checks,
+                    "best": best_practice_checks,
+                },
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
 
     async def _perform_check(self):
         """Perform compliance monitoring and policy checks."""
@@ -109,7 +118,11 @@ class ComplianceAgent(BaseAgent):
 
             # Update compliance status
             await self._update_compliance_status(
-                security_checks, regulatory_checks, best_practice_checks, compliance_analysis, violations
+                security_checks,
+                regulatory_checks,
+                best_practice_checks,
+                compliance_analysis,
+                violations,
             )
 
             # Persist compliance data if enabled
@@ -126,7 +139,11 @@ class ComplianceAgent(BaseAgent):
 
             # Broadcast compliance status
             await self._broadcast_compliance_status(
-                security_checks, regulatory_checks, best_practice_checks, compliance_analysis, violations
+                security_checks,
+                regulatory_checks,
+                best_practice_checks,
+                compliance_analysis,
+                violations,
             )
 
             self.success_count += 1
@@ -145,7 +162,7 @@ class ComplianceAgent(BaseAgent):
                 "access_control": await self._check_access_control(),
                 "data_protection": await self._check_data_protection(),
                 "network_security": await self._check_network_security(),
-                "system_hardening": await self._check_system_hardening()
+                "system_hardening": await self._check_system_hardening(),
             }
 
             return security_checks
@@ -158,7 +175,7 @@ class ComplianceAgent(BaseAgent):
         """Check password policy compliance."""
         try:
             policy = self.security_policies["password_policy"]
-            
+
             # This would check actual password policy settings
             # For now, return simulated results
             return {
@@ -167,7 +184,7 @@ class ComplianceAgent(BaseAgent):
                 "max_age_enforced": True,
                 "password_history_enforced": True,
                 "overall_compliance": True,
-                "details": "Password policy appears to be properly configured"
+                "details": "Password policy appears to be properly configured",
             }
 
         except Exception as e:
@@ -178,7 +195,7 @@ class ComplianceAgent(BaseAgent):
         """Check access control compliance."""
         try:
             policy = self.security_policies["access_control"]
-            
+
             # Check for MFA, session timeouts, etc.
             return {
                 "mfa_enabled": True,
@@ -186,7 +203,7 @@ class ComplianceAgent(BaseAgent):
                 "failed_attempt_limits": True,
                 "account_lockout_enabled": True,
                 "overall_compliance": True,
-                "details": "Access control policies appear to be properly configured"
+                "details": "Access control policies appear to be properly configured",
             }
 
         except Exception as e:
@@ -197,7 +214,7 @@ class ComplianceAgent(BaseAgent):
         """Check data protection compliance."""
         try:
             policy = self.security_policies["data_protection"]
-            
+
             # Check encryption, backups, etc.
             return {
                 "encryption_enabled": True,
@@ -205,7 +222,7 @@ class ComplianceAgent(BaseAgent):
                 "data_retention_configured": True,
                 "secure_deletion_enabled": True,
                 "overall_compliance": True,
-                "details": "Data protection measures appear to be properly configured"
+                "details": "Data protection measures appear to be properly configured",
             }
 
         except Exception as e:
@@ -222,7 +239,7 @@ class ComplianceAgent(BaseAgent):
                 "vpn_configured": True,
                 "intrusion_detection": True,
                 "overall_compliance": True,
-                "details": "Network security measures appear to be properly configured"
+                "details": "Network security measures appear to be properly configured",
             }
 
         except Exception as e:
@@ -239,7 +256,7 @@ class ComplianceAgent(BaseAgent):
                 "patches_applied": True,
                 "antivirus_enabled": True,
                 "overall_compliance": True,
-                "details": "System hardening measures appear to be properly configured"
+                "details": "System hardening measures appear to be properly configured",
             }
 
         except Exception as e:
@@ -251,13 +268,13 @@ class ComplianceAgent(BaseAgent):
         try:
             regulatory_checks = {
                 "timestamp": datetime.now().isoformat(),
-                "frameworks": {}
+                "frameworks": {},
             }
-            
+
             for framework in self.regulatory_frameworks:
                 framework_checks = await self._check_framework_compliance(framework)
                 regulatory_checks["frameworks"][framework] = framework_checks
-            
+
             return regulatory_checks
 
         except Exception as e:
@@ -275,38 +292,41 @@ class ComplianceAgent(BaseAgent):
                     "data_subject_rights": True,
                     "data_breach_notification": True,
                     "privacy_by_design": True,
-                    "overall_compliance": True
+                    "overall_compliance": True,
                 },
                 "hipaa": {
                     "privacy_rule": True,
                     "security_rule": True,
                     "breach_notification": True,
-                    "overall_compliance": True
+                    "overall_compliance": True,
                 },
                 "sox": {
                     "financial_controls": True,
                     "it_controls": True,
                     "audit_trail": True,
-                    "overall_compliance": True
+                    "overall_compliance": True,
                 },
                 "pci-dss": {
                     "network_security": True,
                     "cardholder_data_protection": True,
                     "vulnerability_management": True,
-                    "overall_compliance": True
+                    "overall_compliance": True,
                 },
                 "iso-27001": {
                     "information_security_policy": True,
                     "risk_assessment": True,
                     "access_control": True,
-                    "overall_compliance": True
-                }
+                    "overall_compliance": True,
+                },
             }
-            
-            return framework_checks.get(framework.lower(), {
-                "overall_compliance": False,
-                "details": f"Framework {framework} not implemented"
-            })
+
+            return framework_checks.get(
+                framework.lower(),
+                {
+                    "overall_compliance": False,
+                    "details": f"Framework {framework} not implemented",
+                },
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to check {framework} compliance: {e}")
@@ -320,7 +340,7 @@ class ComplianceAgent(BaseAgent):
                 "logging_and_monitoring": await self._check_logging_monitoring(),
                 "incident_response": await self._check_incident_response(),
                 "change_management": await self._check_change_management(),
-                "vendor_management": await self._check_vendor_management()
+                "vendor_management": await self._check_vendor_management(),
             }
 
             return best_practice_checks
@@ -338,7 +358,7 @@ class ComplianceAgent(BaseAgent):
                 "real_time_monitoring": True,
                 "alerting_configured": True,
                 "overall_compliance": True,
-                "details": "Logging and monitoring appear to follow best practices"
+                "details": "Logging and monitoring appear to follow best practices",
             }
 
         except Exception as e:
@@ -354,7 +374,7 @@ class ComplianceAgent(BaseAgent):
                 "communication_procedures": True,
                 "recovery_procedures": True,
                 "overall_compliance": True,
-                "details": "Incident response appears to follow best practices"
+                "details": "Incident response appears to follow best practices",
             }
 
         except Exception as e:
@@ -370,7 +390,7 @@ class ComplianceAgent(BaseAgent):
                 "rollback_procedures": True,
                 "documentation_requirements": True,
                 "overall_compliance": True,
-                "details": "Change management appears to follow best practices"
+                "details": "Change management appears to follow best practices",
             }
 
         except Exception as e:
@@ -386,7 +406,7 @@ class ComplianceAgent(BaseAgent):
                 "performance_monitoring": True,
                 "risk_assessment": True,
                 "overall_compliance": True,
-                "details": "Vendor management appears to follow best practices"
+                "details": "Vendor management appears to follow best practices",
             }
 
         except Exception as e:
@@ -394,69 +414,128 @@ class ComplianceAgent(BaseAgent):
             return {"error": str(e)}
 
     async def _analyze_compliance_status(
-        self, security_checks: Dict[str, Any], regulatory_checks: Dict[str, Any], best_practice_checks: Dict[str, Any]
+        self,
+        security_checks: Dict[str, Any],
+        regulatory_checks: Dict[str, Any],
+        best_practice_checks: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Analyze overall compliance status using Ollama."""
         try:
             # Throttle/caching logic
-            if not hasattr(self, 'analysis_cache'):
+            if not hasattr(self, "analysis_cache"):
                 self.analysis_cache = {}
             cache_ttl = 300  # 5 min
             now = datetime.now()
-            compliance_hash = self._compliance_hash(security_checks, regulatory_checks, best_practice_checks)
+            compliance_hash = self._compliance_hash(
+                security_checks, regulatory_checks, best_practice_checks
+            )
             cached = self.analysis_cache.get(compliance_hash)
-            if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+            if cached and (
+                now - datetime.fromisoformat(cached["timestamp"])
+            ) < timedelta(seconds=cache_ttl):
                 return cached["result"]
             compliance_data = {
                 "security_checks": security_checks,
                 "regulatory_checks": regulatory_checks,
-                "best_practice_checks": best_practice_checks
+                "best_practice_checks": best_practice_checks,
             }
-            analysis_result = await ollama_client.analyze_metrics(compliance_data, "Compliance analysis")
-            result = {
-                "timestamp": now.isoformat(),
-                "compliance_score": self._calculate_compliance_score(security_checks, regulatory_checks, best_practice_checks),
-                "compliance_level": analysis_result.risk_level,
-                "recommendations": analysis_result.alternatives,
-                "confidence": analysis_result.confidence,
-                "analysis": analysis_result.decision
-            }
-            self.analysis_cache[compliance_hash] = {"result": result, "timestamp": now.isoformat()}
-            return result
+            # Truncate prompt if needed
+            prompt_str = truncate_prompt(json.dumps(compliance_data), max_tokens=4096)
+            self.logger.debug(f"Ollama prompt length: {estimate_token_count(prompt_str)} tokens")
+            # Validate input data
+            if not isinstance(security_checks, dict) or not isinstance(regulatory_checks, dict) or not isinstance(best_practice_checks, dict):
+                self.logger.error("Invalid input data for LLM analysis")
+                return {"error": "Invalid input data for LLM analysis"}
+            try:
+                analysis_result = await self.llm_client.analyze_metrics(
+                    compliance_data, "Compliance analysis"
+                )
+                if hasattr(analysis_result, "dict"):
+                    analysis_result = analysis_result.dict()
+                if not isinstance(analysis_result, dict):
+                    self.logger.error(f"LLM analysis did not return a dict: {type(analysis_result)}")
+                    return {
+                        "timestamp": now.isoformat(),
+                        "compliance_score": self._calculate_compliance_score(
+                            security_checks, regulatory_checks, best_practice_checks
+                        ),
+                        "compliance_level": "unknown",
+                        "recommendations": [],
+                        "confidence": 0.0,
+                        "analysis": "Analysis failed (invalid LLM result)",
+                    }
+                result = {
+                    "timestamp": now.isoformat(),
+                    "compliance_score": self._calculate_compliance_score(
+                        security_checks, regulatory_checks, best_practice_checks
+                    ),
+                    "compliance_level": analysis_result.get("risk_level", "unknown"),
+                    "recommendations": analysis_result.get("alternatives", []),
+                    "confidence": analysis_result.get("confidence", 0.0),
+                    "analysis": analysis_result.get("decision", "Analysis failed"),
+                }
+                self.analysis_cache[compliance_hash] = {
+                    "result": result,
+                    "timestamp": now.isoformat(),
+                }
+                return result
+            except Exception as e:
+                self.logger.error(f"Failed to analyze compliance status: {e}")
+                return {
+                    "timestamp": now.isoformat(),
+                    "compliance_score": self._calculate_compliance_score(
+                        security_checks, regulatory_checks, best_practice_checks
+                    ),
+                    "compliance_level": "unknown",
+                    "recommendations": [],
+                    "confidence": 0.0,
+                    "analysis": "Analysis failed",
+                }
         except Exception as e:
             self.logger.error(f"Failed to analyze compliance status: {e}")
             return {
                 "timestamp": now.isoformat(),
-                "compliance_score": self._calculate_compliance_score(security_checks, regulatory_checks, best_practice_checks),
+                "compliance_score": self._calculate_compliance_score(
+                    security_checks, regulatory_checks, best_practice_checks
+                ),
                 "compliance_level": "unknown",
                 "recommendations": [],
                 "confidence": 0.0,
-                "analysis": "Analysis failed"
+                "analysis": "Analysis failed",
             }
 
     def _calculate_compliance_score(
-        self, security_checks: Dict[str, Any], regulatory_checks: Dict[str, Any], best_practice_checks: Dict[str, Any]
+        self,
+        security_checks: Dict[str, Any],
+        regulatory_checks: Dict[str, Any],
+        best_practice_checks: Dict[str, Any],
     ) -> float:
         """Calculate overall compliance score (0-100)."""
         try:
             score = 100.0
-            
+
             # Check security policy compliance
             for check_name, check_result in security_checks.items():
-                if isinstance(check_result, dict) and not check_result.get("overall_compliance", True):
+                if isinstance(check_result, dict) and not check_result.get(
+                    "overall_compliance", True
+                ):
                     score -= 10
-            
+
             # Check regulatory compliance
             frameworks = regulatory_checks.get("frameworks", {})
             for framework, framework_result in frameworks.items():
-                if isinstance(framework_result, dict) and not framework_result.get("overall_compliance", True):
+                if isinstance(framework_result, dict) and not framework_result.get(
+                    "overall_compliance", True
+                ):
                     score -= 15
-            
+
             # Check best practice compliance
             for check_name, check_result in best_practice_checks.items():
-                if isinstance(check_result, dict) and not check_result.get("overall_compliance", True):
+                if isinstance(check_result, dict) and not check_result.get(
+                    "overall_compliance", True
+                ):
                     score -= 5
-            
+
             return max(0.0, score)
 
         except Exception as e:
@@ -464,49 +543,66 @@ class ComplianceAgent(BaseAgent):
             return 50.0
 
     async def _identify_violations(
-        self, security_checks: Dict[str, Any], regulatory_checks: Dict[str, Any], best_practice_checks: Dict[str, Any]
+        self,
+        security_checks: Dict[str, Any],
+        regulatory_checks: Dict[str, Any],
+        best_practice_checks: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Identify compliance violations."""
         violations = []
-        
+
         try:
             # Check security policy violations
             for check_name, check_result in security_checks.items():
-                if isinstance(check_result, dict) and not check_result.get("overall_compliance", True):
-                    violations.append({
-                        "type": "security_policy_violation",
-                        "severity": "high",
-                        "description": f"Security policy violation in {check_name}",
-                        "policy": check_name,
-                        "details": check_result.get("details", "Unknown violation"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-            
+                if isinstance(check_result, dict) and not check_result.get(
+                    "overall_compliance", True
+                ):
+                    violations.append(
+                        {
+                            "type": "security_policy_violation",
+                            "severity": "high",
+                            "description": f"Security policy violation in {check_name}",
+                            "policy": check_name,
+                            "details": check_result.get("details", "Unknown violation"),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+
             # Check regulatory violations
             frameworks = regulatory_checks.get("frameworks", {})
             for framework, framework_result in frameworks.items():
-                if isinstance(framework_result, dict) and not framework_result.get("overall_compliance", True):
-                    violations.append({
-                        "type": "regulatory_violation",
-                        "severity": "critical",
-                        "description": f"Regulatory violation in {framework}",
-                        "framework": framework,
-                        "details": framework_result.get("details", "Unknown violation"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-            
+                if isinstance(framework_result, dict) and not framework_result.get(
+                    "overall_compliance", True
+                ):
+                    violations.append(
+                        {
+                            "type": "regulatory_violation",
+                            "severity": "critical",
+                            "description": f"Regulatory violation in {framework}",
+                            "framework": framework,
+                            "details": framework_result.get(
+                                "details", "Unknown violation"
+                            ),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+
             # Check best practice violations
             for check_name, check_result in best_practice_checks.items():
-                if isinstance(check_result, dict) and not check_result.get("overall_compliance", True):
-                    violations.append({
-                        "type": "best_practice_violation",
-                        "severity": "medium",
-                        "description": f"Best practice violation in {check_name}",
-                        "practice": check_name,
-                        "details": check_result.get("details", "Unknown violation"),
-                        "timestamp": datetime.now().isoformat()
-                    })
-            
+                if isinstance(check_result, dict) and not check_result.get(
+                    "overall_compliance", True
+                ):
+                    violations.append(
+                        {
+                            "type": "best_practice_violation",
+                            "severity": "medium",
+                            "description": f"Best practice violation in {check_name}",
+                            "practice": check_name,
+                            "details": check_result.get("details", "Unknown violation"),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+
             return violations
 
         except Exception as e:
@@ -518,16 +614,18 @@ class ComplianceAgent(BaseAgent):
         try:
             for violation in violations:
                 violation_type = violation.get("type")
-                
+
                 if violation_type == "security_policy_violation":
                     await self._remediate_security_violation(violation)
                 elif violation_type == "regulatory_violation":
                     await self._remediate_regulatory_violation(violation)
                 elif violation_type == "best_practice_violation":
                     await self._remediate_best_practice_violation(violation)
-                
+
                 # Log the remediation action
-                self.logger.warning(f"Compliance remediation performed for {violation_type}: {violation.get('description')}")
+                self.logger.warning(
+                    f"Compliance remediation performed for {violation_type}: {violation.get('description')}"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to perform compliance remediation: {e}")
@@ -536,8 +634,10 @@ class ComplianceAgent(BaseAgent):
         """Remediate security policy violation."""
         try:
             policy = violation.get("policy")
-            self.logger.info(f"Would remediate security violation for {policy} in production")
-            
+            self.logger.info(
+                f"Would remediate security violation for {policy} in production"
+            )
+
         except Exception as e:
             self.logger.error(f"Failed to remediate security violation: {e}")
 
@@ -545,8 +645,10 @@ class ComplianceAgent(BaseAgent):
         """Remediate regulatory violation."""
         try:
             framework = violation.get("framework")
-            self.logger.info(f"Would remediate regulatory violation for {framework} in production")
-            
+            self.logger.info(
+                f"Would remediate regulatory violation for {framework} in production"
+            )
+
         except Exception as e:
             self.logger.error(f"Failed to remediate regulatory violation: {e}")
 
@@ -554,45 +656,57 @@ class ComplianceAgent(BaseAgent):
         """Remediate best practice violation."""
         try:
             practice = violation.get("practice")
-            self.logger.info(f"Would remediate best practice violation for {practice} in production")
-            
+            self.logger.info(
+                f"Would remediate best practice violation for {practice} in production"
+            )
+
         except Exception as e:
             self.logger.error(f"Failed to remediate best practice violation: {e}")
 
     async def _update_compliance_status(
-        self, security_checks: Dict[str, Any], regulatory_checks: Dict[str, Any], 
-        best_practice_checks: Dict[str, Any], analysis: Dict[str, Any], violations: List[Dict[str, Any]]
+        self,
+        security_checks: Dict[str, Any],
+        regulatory_checks: Dict[str, Any],
+        best_practice_checks: Dict[str, Any],
+        analysis: Dict[str, Any],
+        violations: List[Dict[str, Any]],
     ):
         """Update compliance status."""
         try:
-            self.compliance_checks.append({
-                "timestamp": datetime.now().isoformat(),
-                "security_checks": security_checks,
-                "regulatory_checks": regulatory_checks,
-                "best_practice_checks": best_practice_checks,
-                "analysis": analysis,
-                "violations": violations
-            })
-            
+            self.compliance_checks.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "security_checks": security_checks,
+                    "regulatory_checks": regulatory_checks,
+                    "best_practice_checks": best_practice_checks,
+                    "analysis": analysis,
+                    "violations": violations,
+                }
+            )
+
             # Keep only recent checks
             if len(self.compliance_checks) > 100:
                 self.compliance_checks = self.compliance_checks[-100:]
-            
+
             # Update violations
             if violations:
                 self.policy_violations.extend(violations)
                 if len(self.policy_violations) > 50:
                     self.policy_violations = self.policy_violations[-50:]
-            
+
             # Update compliance score
             self.compliance_score = analysis.get("compliance_score", 100.0)
-            
+
         except Exception as e:
             self.logger.error(f"Failed to update compliance status: {e}")
 
     async def _broadcast_compliance_status(
-        self, security_checks: Dict[str, Any], regulatory_checks: Dict[str, Any], 
-        best_practice_checks: Dict[str, Any], analysis: Dict[str, Any], violations: List[Dict[str, Any]]
+        self,
+        security_checks: Dict[str, Any],
+        regulatory_checks: Dict[str, Any],
+        best_practice_checks: Dict[str, Any],
+        analysis: Dict[str, Any],
+        violations: List[Dict[str, Any]],
     ):
         """Broadcast compliance status to other agents."""
         try:
@@ -604,36 +718,40 @@ class ComplianceAgent(BaseAgent):
                 "violations": violations,
                 "compliance_score": analysis.get("compliance_score", 0),
                 "compliance_level": analysis.get("compliance_level", "unknown"),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             await self.message_bus.broadcast(
                 sender=self.agent_name,
                 message_type=MessageType.COMPLIANCE_UPDATE,
                 content=compliance_status,
-                priority=MessagePriority.HIGH if violations else MessagePriority.NORMAL
+                priority=MessagePriority.HIGH if violations else MessagePriority.NORMAL,
             )
-            
+
         except Exception as e:
             self.logger.error(f"Failed to broadcast compliance status: {e}")
 
     async def _setup_subscriptions(self):
         """Set up message subscriptions for the compliance agent."""
         await super()._setup_subscriptions()
-        
+
         # Subscribe to compliance-related messages
-        await self.message_bus.subscribe(MessageType.ALERT, self._handle_compliance_alert)
+        await self.message_bus.subscribe(
+            MessageType.ALERT, self._handle_compliance_alert
+        )
         self.subscribed_message_types.append(MessageType.ALERT)
 
     async def _handle_compliance_alert(self, message):
         """Handle compliance-related alerts."""
         if message.sender == self.agent_name:
             return  # Ignore our own messages
-        
+
         # Process compliance alerts
         alert_content = message.content
         if "compliance" in alert_content.get("type", "").lower():
-            self.logger.warning(f"Compliance alert received: {alert_content.get('message', 'Unknown alert')}")
+            self.logger.warning(
+                f"Compliance alert received: {alert_content.get('message', 'Unknown alert')}"
+            )
 
     def get_compliance_summary(self) -> Dict[str, Any]:
         """Get a summary of compliance status."""
@@ -642,6 +760,8 @@ class ComplianceAgent(BaseAgent):
             "total_violations": len(self.policy_violations),
             "compliance_score": self.compliance_score,
             "regulatory_frameworks": self.regulatory_frameworks,
-            "recent_violations": self.policy_violations[-5:] if self.policy_violations else [],
-            "security_policies": list(self.security_policies.keys())
-        } 
+            "recent_violations": (
+                self.policy_violations[-5:] if self.policy_violations else []
+            ),
+            "security_policies": list(self.security_policies.keys()),
+        }

@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -61,6 +61,7 @@ class RemediatorAgent(BaseAgent):
 
     def _target_hash(self, target):
         import json
+
         return hashlib.sha256(json.dumps(target, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
@@ -332,25 +333,26 @@ class RemediatorAgent(BaseAgent):
         )
 
     async def _get_remediation_plan(self, target: Dict[str, Any]) -> Any:
-        # Throttle/caching logic
-        plan_cache = getattr(self, 'plan_cache', {})
-        cache_ttl = 300  # 5 min
-        now = datetime.now()
-        target_hash = self._target_hash(target)
-        cached = plan_cache.get(target_hash)
-        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
-            return cached["plan"]
+        """Get remediation plan from Ollama for the given target."""
         try:
-            plan = await ollama_client.recommend_remediation(
-                target.get("issue", ""),
-                target.get("metrics", {}),
-                target.get("available_actions", [])
+            # Validate input
+            if not isinstance(target, dict):
+                self.logger.error("Invalid target for remediation plan")
+                return self._get_fallback_remediation_plan(target)
+            # Use Ollama for remediation planning
+            plan = await self.llm_client.recommend_remediation(
+                issue=target.get("type", "unknown_issue"),
+                metrics=target,
+                available_actions=["restart_service", "cleanup_disk", "flush_dns", "clear_cache", "kill_process"]
             )
-            plan_cache[target_hash] = {"plan": plan, "timestamp": now.isoformat()}
-            self.plan_cache = plan_cache
+            if hasattr(plan, "dict"):
+                plan = plan.dict()
+            if not isinstance(plan, dict):
+                self.logger.error(f"LLM remediation plan did not return a dict: {type(plan)}")
+                return self._get_fallback_remediation_plan(target)
             return plan
         except Exception as e:
-            self.logger.error(f"LLM remediation plan failed: {e}")
+            self.logger.error(f"Failed to get remediation plan: {e}")
             return self._get_fallback_remediation_plan(target)
 
     async def _get_current_metrics(self) -> Dict[str, Any]:
@@ -398,20 +400,34 @@ class RemediatorAgent(BaseAgent):
 
             # Execute based on target type
             if target["type"] == "service_stopped":
-                action_performed = await self._restart_service(
-                    target.get("service_name")
-                )
+                service_name = target.get("service_name")
+                if isinstance(service_name, str) and service_name:
+                    action_performed = await self._restart_service(service_name)
+                else:
+                    self.logger.error("No valid service_name provided for service_stopped remediation.")
+                    action_performed = False
             elif target["type"] in ["disk_critical", "disk_warning"]:
-                action_performed = await self._cleanup_disk_space(target.get("path"))
+                path = target.get("path")
+                if isinstance(path, str) and path:
+                    action_performed = await self._cleanup_disk_space(path)
+                else:
+                    self.logger.error("No valid path provided for disk remediation.")
+                    action_performed = False
             elif target["type"] == "gpt_recommendation":
-                action_performed = await self._execute_gpt_recommendation(
-                    target.get("action")
-                )
+                action = target.get("action")
+                if isinstance(action, str) and action:
+                    action_performed = await self._execute_gpt_recommendation(action)
+                else:
+                    self.logger.error("No valid action provided for gpt_recommendation remediation.")
+                    action_performed = False
             else:
                 # Generic remediation based on LLM suggestions
-                action_performed = await self._execute_gpt_suggestions(
-                    llm_decision["suggested_actions"]
-                )
+                suggested_actions = llm_decision["suggested_actions"] if isinstance(llm_decision, dict) and "suggested_actions" in llm_decision else []
+                if isinstance(suggested_actions, list) and suggested_actions:
+                    action_performed = await self._execute_gpt_suggestions(suggested_actions)
+                else:
+                    self.logger.error("No valid suggested_actions for generic remediation.")
+                    action_performed = False
 
             # Log the action
             if action_performed:
@@ -566,7 +582,10 @@ class RemediatorAgent(BaseAgent):
                 else:
                     self.logger.info("Browser cache cleanup is disabled in config.")
                     return False
-            elif "user process restart" in action_lower or "restart explorer" in action_lower:
+            elif (
+                "user process restart" in action_lower
+                or "restart explorer" in action_lower
+            ):
                 if config.user_process_restart_enabled:
                     return await self._restart_user_process("explorer.exe")
                 else:
@@ -591,10 +610,13 @@ class RemediatorAgent(BaseAgent):
             import shutil
             import glob
             import getpass
+
             user = getpass.getuser()
             cleaned = 0
             # Chrome
-            chrome_cache = f"C:/Users/{user}/AppData/Local/Google/Chrome/User Data/Default/Cache"
+            chrome_cache = (
+                f"C:/Users/{user}/AppData/Local/Google/Chrome/User Data/Default/Cache"
+            )
             if os.path.exists(chrome_cache):
                 for file in glob.glob(f"{chrome_cache}/*"):
                     try:
@@ -607,7 +629,9 @@ class RemediatorAgent(BaseAgent):
                     except Exception:
                         continue
             # Edge
-            edge_cache = f"C:/Users/{user}/AppData/Local/Microsoft/Edge/User Data/Default/Cache"
+            edge_cache = (
+                f"C:/Users/{user}/AppData/Local/Microsoft/Edge/User Data/Default/Cache"
+            )
             if os.path.exists(edge_cache):
                 for file in glob.glob(f"{edge_cache}/*"):
                     try:
@@ -620,7 +644,9 @@ class RemediatorAgent(BaseAgent):
                     except Exception:
                         continue
             # Firefox
-            firefox_cache_root = f"C:/Users/{user}/AppData/Local/Mozilla/Firefox/Profiles"
+            firefox_cache_root = (
+                f"C:/Users/{user}/AppData/Local/Mozilla/Firefox/Profiles"
+            )
             if os.path.exists(firefox_cache_root):
                 for profile in os.listdir(firefox_cache_root):
                     cache_path = os.path.join(firefox_cache_root, profile, "cache2")
@@ -645,9 +671,13 @@ class RemediatorAgent(BaseAgent):
         """Restart a user process (e.g., explorer.exe)."""
         try:
             import psutil
+
             killed = 0
             for proc in psutil.process_iter(["name"]):
-                if proc.info["name"] and proc.info["name"].lower() == process_name.lower():
+                if (
+                    proc.info["name"]
+                    and proc.info["name"].lower() == process_name.lower()
+                ):
                     proc.kill()
                     killed += 1
             await asyncio.sleep(2)
@@ -662,7 +692,9 @@ class RemediatorAgent(BaseAgent):
     async def _flush_dns_cache(self) -> bool:
         """Flush the Windows DNS cache."""
         try:
-            result = subprocess.run(["ipconfig", "/flushdns"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(
+                ["ipconfig", "/flushdns"], capture_output=True, text=True, timeout=10
+            )
             if result.returncode == 0:
                 self.logger.success("Flushed DNS cache successfully.")
                 return True
@@ -720,11 +752,18 @@ class RemediatorAgent(BaseAgent):
         if self.persistence_enabled:
             try:
                 import json
+
                 await self.persistence.insert_remediation(
                     timestamp=attempt["timestamp"],
                     agent=self.agent_name,
                     action=attempt["action"],
-                    result=json.dumps({"success": success, "target": target, "llm_decision": llm_decision}),
+                    result=json.dumps(
+                        {
+                            "success": success,
+                            "target": target,
+                            "llm_decision": llm_decision,
+                        }
+                    ),
                 )
             except Exception as e:
                 self.logger.error(f"Failed to persist remediation: {e}")
@@ -800,9 +839,13 @@ class RemediatorAgent(BaseAgent):
         if len(metrics) < 3:
             return {"error": "Insufficient data for trend analysis"}
         try:
-            gpt_decision = await ollama_client.detect_anomalies(
-                metrics, []
-            )
+            latest_metrics = metrics[-1]
+            historical_context = metrics[:-1] if len(metrics) > 1 else []
+            # Truncate context if needed
+            import json
+            context_str = truncate_prompt(json.dumps(historical_context), max_tokens=4096)
+            self.logger.debug(f"Ollama trend context length: {estimate_token_count(context_str)} tokens")
+            gpt_decision = await ollama_client.detect_anomalies(latest_metrics, historical_context)
             trends = {
                 "timestamp": datetime.now().isoformat(),
                 "trend_analysis": {
@@ -810,13 +853,9 @@ class RemediatorAgent(BaseAgent):
                     "reasoning": gpt_decision.reasoning,
                     "confidence": gpt_decision.confidence,
                     "risk_level": gpt_decision.risk_level,
-                    "anomalies_detected": gpt_decision.metadata.get(
-                        "anomalies_detected", []
-                    ),
+                    "anomalies_detected": gpt_decision.metadata.get("anomalies_detected", []),
                     "severity": gpt_decision.metadata.get("severity", "unknown"),
-                    "affected_metrics": gpt_decision.metadata.get(
-                        "affected_metrics", []
-                    ),
+                    "affected_metrics": gpt_decision.metadata.get("affected_metrics", []),
                 },
                 "calculated_trends": {},
             }

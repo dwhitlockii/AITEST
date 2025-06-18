@@ -8641,3 +8641,714 @@
 2025-06-18 03:40:34 - AgentSystem - WARNING - 🤖 OllamaClient: Default model llama2:latest not available. Available: []
 2025-06-18 03:40:41 - AgentSystem - ERROR - 🤖 OllamaClient: Error refreshing models: 
 2025-06-18 03:40:41 - AgentSystem - WARNING - 🤖 OllamaClient: Default model llama2:latest not available. Available: []
+2025-06-18 03:58:22 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 03:58:22 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 03:58:22 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 03:58:26 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 03:59:43 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 03:59:43 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 03:59:43 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 03:59:43 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 03:59:48 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 03:59:48 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 04:00:08 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:00:20 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 04:00:20 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 04:00:20 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 04:00:20 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 04:00:27 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:00:28 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:00:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:00:46 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:00:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:01:02 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 04:01:23 - AgentSystem - WARNING - 🤖 application: Application remediation performed for high_cpu_processes: 6 processes using high CPU
+2025-06-18 04:01:23 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 04:01:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:01:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:01:49 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:01:49 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:01:49 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:02:03 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:03:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:03:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 8.8.8.8 is unreachable
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 1.1.1.1 is unreachable
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host google.com is unreachable
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:03:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 1 processes
+2025-06-18 04:03:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:03:30 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 04:03:30 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 04:03:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from network: network_update
+2025-06-18 04:03:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 04:04:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 04:04:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:04:33 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:04:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:04:33 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:04:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:04:45 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 04:04:45 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 04:04:45 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 04:04:45 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 04:06:28 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:31 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:31 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 2 processes
+2025-06-18 04:06:32 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:32 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 04:06:32 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 04:06:33 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:06:33 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:33 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 04:06:33 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 04:06:33 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:33 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.7 > 85.0
+2025-06-18 04:06:33 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.7 > 85.0
+2025-06-18 04:06:33 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 04:06:33 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.7 > 85.0
+2025-06-18 04:06:33 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 04:06:46 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 04:06:46 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 04:06:46 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 04:06:46 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 04:06:53 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:06:59 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:07:12 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 04:07:17 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:07:17 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:07:25 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 04:07:25 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 04:07:25 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 04:07:25 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 04:07:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:07:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 04:07:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:07:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:07:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:07:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 04:07:47 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:06:28 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama health check failed: Cannot connect to host localhost:11434 ssl:default [The remote computer refused the network connection]
+2025-06-18 17:17:09 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:17:09 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:17:09 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:17:09 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:17:15 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:18:32 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:18:32 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:18:32 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:18:32 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:18:38 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:18:39 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:18:39 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 2 processes
+2025-06-18 17:18:39 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 17:18:39 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:19:02 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:19:15 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:19:15 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:19:15 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:19:15 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:19:32 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 2 processes
+2025-06-18 17:19:32 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:19:32 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 1): 500
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 1): 500
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 1): 500
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 1): 500
+2025-06-18 17:19:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 1): 500
+2025-06-18 17:19:38 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 17:19:38 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 17:19:38 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 17:19:38 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.7 > 85.0
+2025-06-18 17:19:38 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.7 > 85.0
+2025-06-18 17:19:44 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 95.2%
+2025-06-18 17:19:55 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:20:31 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 8.8.8.8 is unreachable
+2025-06-18 17:20:31 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 1.1.1.1 is unreachable
+2025-06-18 17:20:31 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host google.com is unreachable
+2025-06-18 17:20:31 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from network: network_update
+2025-06-18 17:20:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:20:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:20:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:20:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:20:55 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:20:56 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:21:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:21:38 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:21:38 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:21:38 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:21:38 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:21:38 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:21:38 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 17:21:38 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 17:21:40 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:21:55 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:21:59 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:22:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:22:27 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:24:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:24:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:24:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:24:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:24:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:24:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:24:45 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 4 processes
+2025-06-18 17:24:46 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:24:46 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 17:24:59 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 99.2%
+2025-06-18 17:24:59 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:24:59 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:24:59 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:24:59 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:25:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:25:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:25:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:25:42 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:25:46 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:25:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:25:48 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:25:48 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:25:48 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:25:48 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:25:48 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 8.8.8.8 is unreachable
+2025-06-18 17:25:48 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 1.1.1.1 is unreachable
+2025-06-18 17:25:48 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host google.com is unreachable
+2025-06-18 17:25:48 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from network: network_update
+2025-06-18 17:26:13 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:26:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:26:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:26:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:26:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:26:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:26:42 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:26:50 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:26:50 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:26:50 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:27:15 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:27:38 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:27:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:27:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:27:42 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:27:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:27:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:27:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:27:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:27:45 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 17:27:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:27:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:27:45 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 17:27:52 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:27:52 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:27:52 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:27:52 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 17:27:52 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 17:27:52 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 17:27:53 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:27:53 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:28:18 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:28:18 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:28:31 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 96.8%
+2025-06-18 17:28:31 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:28:31 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:28:31 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:28:31 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:28:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:28:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:28:54 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:29:46 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:29:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:30:49 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:30:55 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:30:55 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:30:55 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:30:55 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 4 processes
+2025-06-18 17:30:55 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 3): 500
+2025-06-18 17:30:55 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request failed (attempt 3): 500
+2025-06-18 17:30:55 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama remediation recommendation failed: All Ollama request attempts failed
+2025-06-18 17:30:55 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama remediation recommendation failed: All Ollama request attempts failed
+2025-06-18 17:31:06 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:31:06 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: All Ollama request attempts failed
+2025-06-18 17:31:06 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from AnalyzerAgent: alert
+2025-06-18 17:31:06 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: 🚨 CRITICAL ALERT: memory_usage exceeded threshold: 95.2 > 95.0
+2025-06-18 17:31:06 - AgentSystem - ERROR - 🔧 RemediatorAgent: Error during remediation: 'issue'
+2025-06-18 17:31:07 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 95.2 > 95.0
+2025-06-18 17:31:07 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 92.4 > 85.0
+2025-06-18 17:31:07 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 92.4 > 85.0
+2025-06-18 17:31:07 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 17:31:08 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 17:31:23 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:31:56 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:31:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:31:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:31:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:32:07 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:32:07 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:32:07 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:32:07 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 8.8.8.8 is unreachable
+2025-06-18 17:32:07 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 1.1.1.1 is unreachable
+2025-06-18 17:32:07 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host google.com is unreachable
+2025-06-18 17:32:07 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from network: network_update
+2025-06-18 17:32:08 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:32:28 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:32:58 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:32:59 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:08 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:33:10 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:11 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:33:29 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:33:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 17:34:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:34:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:02 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: All Ollama request attempts failed
+2025-06-18 17:34:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:04 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:34:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:04 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:34:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:04 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:34:04 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 17:34:04 - AgentSystem - WARNING - 🤖 application: Application remediation performed for cpu_pressure: High CPU usage detected
+2025-06-18 17:34:04 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 17:34:11 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 17:34:13 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:13 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:34:13 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 17:34:13 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 17:34:13 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 17:34:15 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:34:15 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:34:28 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 95.1%
+2025-06-18 17:34:28 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 17:34:28 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 17:34:28 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 17:34:28 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 17:34:52 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 17:34:56 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 8.8.8.8 is unreachable
+2025-06-18 17:34:56 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host 1.1.1.1 is unreachable
+2025-06-18 17:34:56 - AgentSystem - WARNING - 🤖 network: Network remediation performed for connectivity_issue: Host google.com is unreachable
+2025-06-18 17:34:56 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from network: network_update
+2025-06-18 17:35:03 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 17:35:03 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 17:35:03 - AgentSystem - WARNING - 🤖 security: Security remediation performed for suspicious_process: Suspicious processes detected: 1 processes
+2025-06-18 17:35:03 - AgentSystem - ERROR - 🤖 security: Failed to broadcast security status: 'OllamaDecision' object has no attribute 'get'
+2025-06-18 18:15:07 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 95.2%
+2025-06-18 18:15:07 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:15:07 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:15:07 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:15:07 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:15:16 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:16:37 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:16:37 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:16:45 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:16:45 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:16:45 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:16:45 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:16:51 - AgentSystem - ERROR - 🤖 OllamaClient: Error refreshing models: 
+2025-06-18 18:16:51 - AgentSystem - WARNING - 🤖 OllamaClient: Default model llama2:latest not available. Available: []
+2025-06-18 18:16:51 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:16:52 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:16:52 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:16:52 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:16:52 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 18:16:52 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 18:17:48 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:17:49 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:17:49 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:17:50 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:17:50 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:17:50 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:17:50 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:17:52 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:20:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:20:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:20:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:20:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:20:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:20:42 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:20:42 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:20:42 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:20:42 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:20:42 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:21:29 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:21:42 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:21:42 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:21:42 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:21:42 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:22:32 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:22:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:22:43 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:22:43 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 92.9 > 85.0
+2025-06-18 18:22:43 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:22:43 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:22:44 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:22:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:22:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:22:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:22:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:22:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:22:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:22:45 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:22:57 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 97.4%
+2025-06-18 18:22:57 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:22:57 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:22:57 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:22:57 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:23:35 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:23:35 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:23:35 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 18:23:35 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 18:23:41 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:23:50 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:24:17 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:27:24 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:27:24 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:27:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:27:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:27:24 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: All Ollama request attempts failed
+2025-06-18 18:27:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:27:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:27:24 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:27:26 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:28:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:28:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:28:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:28:26 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:28:27 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:28:27 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:28:27 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:28:27 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:28:27 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:28:39 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 98.4%
+2025-06-18 18:28:39 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:28:39 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:28:39 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:28:39 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:29:20 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:29:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:29:28 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:29:28 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:29:28 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:29:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:29:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:29:30 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:29:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: cpu_usage exceeded threshold: 80.6 > 75.0
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: cpu_usage exceeded threshold: 80.6 > 75.0
+2025-06-18 18:29:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from AnalyzerAgent: alert
+2025-06-18 18:29:30 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: 🚨 CRITICAL ALERT: memory_usage exceeded threshold: 97.4 > 95.0
+2025-06-18 18:29:30 - AgentSystem - ERROR - 🔧 RemediatorAgent: Error during remediation: 'issue'
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 97.4 > 95.0
+2025-06-18 18:29:30 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:29:30 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:29:59 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:30:23 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:30:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:30:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:30:25 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 18:30:25 - AgentSystem - WARNING - 🤖 application: Application remediation performed for cpu_pressure: High CPU usage detected
+2025-06-18 18:30:25 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 18:30:29 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:30:31 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:30:31 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:30:31 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:30:31 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:30:31 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:30:31 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:30:31 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:31:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:31:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:32:57 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:32:57 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:32:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:32:57 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:32:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:32:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:32:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:32:57 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:32:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:32:58 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:33:11 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:33:11 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:33:11 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:33:11 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:33:46 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:33:46 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:33:46 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:33:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:33:52 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:33:58 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:33:58 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:34:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:34:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:34:00 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:34:00 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:34:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:34:51 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:34:52 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:35:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:35:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:35:03 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:35:03 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:35:03 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:35:03 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:35:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:35:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:35:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:35:57 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:35:57 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:36:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:36:04 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:36:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:36:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:36:04 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: All Ollama request attempts failed
+2025-06-18 18:36:34 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:36:34 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:36:34 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:36:34 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:36:40 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:36:50 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:36:50 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:38:13 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:38:13 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:38:13 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:38:13 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:38:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:38:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:38:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:38:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:38:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:38:19 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:39:11 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:39:19 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:39:20 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:39:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:39:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:39:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:39:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:39:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:40:14 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:40:20 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:40:20 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:40:23 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:40:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:40:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:40:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:40:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:40:25 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:40:25 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:40:25 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:41:16 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 18:41:16 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 18:41:20 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:41:23 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:41:26 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:41:26 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:41:26 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:41:38 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:41:38 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:41:38 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:41:38 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:44:01 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:44:01 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:44:16 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:44:16 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:44:16 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:44:16 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:44:16 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:44:17 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:44:17 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: memory_usage exceeded threshold: 87.8 > 85.0
+2025-06-18 18:44:17 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 87.8 > 85.0
+2025-06-18 18:44:17 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:44:17 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:45:01 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:45:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:45:02 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:45:12 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:45:17 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:45:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:45:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:45:19 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:45:19 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama anomaly detection failed: All Ollama request attempts failed
+2025-06-18 18:46:03 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:46:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:46:10 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:46:15 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:46:18 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:46:20 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:46:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:46:22 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:46:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:46:22 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:46:35 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:46:35 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:46:35 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:46:35 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:47:04 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:47:10 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:47:10 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:47:10 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:47:10 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 18:47:10 - AgentSystem - WARNING - 🤖 application: Application remediation performed for cpu_pressure: High CPU usage detected
+2025-06-18 18:47:11 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 18:47:13 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:47:13 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:47:18 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:47:18 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:47:18 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:47:18 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:47:18 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:47:22 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:47:23 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 18:47:23 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 18:47:49 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:48:04 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:49:58 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:49:58 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:49:58 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:49:58 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:50:11 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:52:11 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:52:11 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:52:26 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:52:26 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:52:26 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:52:27 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:52:35 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:52:40 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:52:40 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:53:52 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 95.3%
+2025-06-18 18:53:52 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:53:52 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:53:52 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:53:53 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:54:00 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:54:00 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:54:00 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:54:00 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:54:00 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:54:00 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:54:12 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 95.4%
+2025-06-18 18:54:29 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.
+2025-06-18 18:54:43 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:54:43 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:54:43 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:54:43 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:55:01 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:55:01 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from AnalyzerAgent: alert
+2025-06-18 18:55:01 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: 🚨 CRITICAL ALERT: memory_usage exceeded threshold: 95.4 > 95.0
+2025-06-18 18:55:01 - AgentSystem - ERROR - 🔧 RemediatorAgent: Error during remediation: 'issue'
+2025-06-18 18:55:01 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: memory_usage exceeded threshold: 95.4 > 95.0
+2025-06-18 18:55:01 - AgentSystem - WARNING - 📢 CommunicatorAgent: ⚠️ Alert: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:55:01 - AgentSystem - WARNING - 🧠 AnalyzerAgent: Alert generated: disk_usage_C:\ exceeded threshold: 93.3 > 85.0
+2025-06-18 18:56:12 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:56:12 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:56:12 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:56:12 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:57:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:57:04 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:57:12 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 18:57:55 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 18:57:55 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 18:57:55 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 18:58:11 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 18:58:12 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:58:14 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:58:14 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:58:14 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 18:58:27 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 18:58:27 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 18:58:27 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 18:58:27 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 18:58:34 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 18:58:40 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 18:58:40 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 19:00:33 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 19:00:33 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 19:00:33 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 19:00:33 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap
+2025-06-18 19:00:39 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:00:39 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 19:00:53 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:00:57 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:01:02 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:01:39 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 19:01:58 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 19:01:58 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 19:02:39 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 19:02:39 - AgentSystem - ERROR - 🤖 predictive: Invalid input data for LLM analysis
+2025-06-18 19:02:40 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:02:40 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 19:02:42 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:02:56 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 1)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:04:44 - AgentSystem - WARNING - 📢 CommunicatorAgent: System showing some stress - keeping an eye on things
+2025-06-18 19:04:45 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 19:04:45 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 19:04:59 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 19:04:59 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 19:04:59 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: D:\Backups
+2025-06-18 19:04:59 - AgentSystem - WARNING - 🤖 backup: Backup remediation performed for backup_storage_unavailable: Backup storage unavailable: \\backup-server\backups
+2025-06-18 19:04:59 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from backup: backup_update
+2025-06-18 19:05:45 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 19:06:10 - AgentSystem - WARNING - 🤖 application: Application remediation performed for memory_pressure: High memory usage detected
+2025-06-18 19:06:10 - AgentSystem - WARNING - 📢 CommunicatorAgent: High priority message from application: application_update
+2025-06-18 19:06:46 - AgentSystem - CRITICAL - 📢 CommunicatorAgent: CRITICAL: System is in critical condition - immediate attention required
+2025-06-18 19:06:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 19:06:47 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 19:06:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:06:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 19:06:47 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 19:06:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 2)
+2025-06-18 19:06:47 - AgentSystem - WARNING - 🤖 OllamaClient: Ollama request timeout (attempt 3)
+2025-06-18 19:06:47 - AgentSystem - ERROR - 🤖 OllamaClient: Ollama analysis failed: All Ollama request attempts failed
+2025-06-18 19:06:59 - AgentSystem - WARNING - 📡 SensorAgent: Memory usage is through the roof: 96.6%
+2025-06-18 19:06:59 - AgentSystem - WARNING - 📡 SensorAgent: Service wuauserv is taking a nap
+2025-06-18 19:06:59 - AgentSystem - WARNING - 📡 SensorAgent: Service explorer is taking a nap
+2025-06-18 19:06:59 - AgentSystem - WARNING - 📡 SensorAgent: Service svchost is taking a nap
+2025-06-18 19:06:59 - AgentSystem - WARNING - 📡 SensorAgent: Service winlogon is taking a nap

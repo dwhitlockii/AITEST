@@ -5,7 +5,7 @@ Think of this as the control room dashboard - everything centralized and tweakab
 
 import os
 from typing import Dict, Any, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -40,12 +40,12 @@ class AgentConfig:
 class MonitoringConfig:
     """What we're actually monitoring - the targets of our surveillance."""
 
-    services_to_monitor: List[str] = None
-    disk_paths: List[str] = None
-    network_interfaces: List[str] = None
+    services_to_monitor: List[str] = field(default_factory=list)
+    disk_paths: List[str] = field(default_factory=list)
+    network_interfaces: List[str] = field(default_factory=list)
 
     def __post_init__(self):
-        if self.services_to_monitor is None:
+        if not self.services_to_monitor:
             # Default services that are usually important
             self.services_to_monitor = [
                 "spooler",
@@ -57,10 +57,10 @@ class MonitoringConfig:
                 "winlogon",  # Critical processes
             ]
 
-        if self.disk_paths is None:
+        if not self.disk_paths:
             self.disk_paths = ["C:\\"]  # Monitor C: drive by default
 
-        if self.network_interfaces is None:
+        if not self.network_interfaces:
             self.network_interfaces = ["Ethernet", "Wi-Fi"]
 
 
@@ -82,7 +82,7 @@ class OllamaConfig:
 
     url: str = "http://localhost:11434"
     model: str = "llama2:latest"
-    timeout: int = 60  # Increased from 30 to 60 seconds for better reliability
+    timeout: int = 120  # Increased from 60 to 120 seconds for better reliability
     retry_attempts: int = 3
     retry_delay: int = 2
     enabled: bool = True
@@ -210,13 +210,13 @@ class Config:
 
         # Plugin system configuration
         self.plugins_enabled = True
-        self.plugins_to_load = ['sample_remediation_plugin']
-        self.plugin_configs = {
-            'sample_remediation_plugin': {'enabled': True}
-        }
+        self.plugins_to_load = ["sample_remediation_plugin"]
+        self.plugin_configs = {"sample_remediation_plugin": {"enabled": True}}
 
         # LLM fallback state
-        self.llm_fallback_active = False  # True if OpenAI quota exceeded and fallback is required
+        self.llm_fallback_active = (
+            False  # True if OpenAI quota exceeded and fallback is required
+        )
         self.llm_fallback_reason = None
 
         # Ollama configuration
@@ -224,7 +224,10 @@ class Config:
 
     def get_agent_config(self, agent_name: str) -> AgentConfig:
         """Get configuration for a specific agent."""
-        return self.agents.get(agent_name)
+        config = self.agents.get(agent_name)
+        if config is None:
+            raise ValueError(f"No configuration found for agent: {agent_name}")
+        return config
 
     def update_threshold(self, metric: str, value: float):
         """Dynamically update thresholds - for when we need to adapt."""
@@ -279,9 +282,9 @@ class Config:
         """Load configuration from environment variables."""
         # Ollama settings
         if os.getenv("OLLAMA_URL"):
-            self.ollama.url = os.getenv("OLLAMA_URL")
+            self.ollama.url = str(os.getenv("OLLAMA_URL"))
         if os.getenv("OLLAMA_MODEL"):
-            self.ollama.model = os.getenv("OLLAMA_MODEL")
+            self.ollama.model = str(os.getenv("OLLAMA_MODEL"))
         if os.getenv("OLLAMA_ENABLED"):
             self.ollama.enabled = os.getenv("OLLAMA_ENABLED").lower() == "true"
 
@@ -293,7 +296,9 @@ class Config:
 
         # Persistence settings
         if os.getenv("PERSISTENCE_ENABLED"):
-            self.persistence_enabled = os.getenv("PERSISTENCE_ENABLED").lower() == "true"
+            self.persistence_enabled = (
+                os.getenv("PERSISTENCE_ENABLED").lower() == "true"
+            )
         if os.getenv("DB_PATH"):
             self.db_path = os.getenv("DB_PATH")
 

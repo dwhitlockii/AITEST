@@ -12,7 +12,7 @@ import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -55,6 +55,7 @@ class AnalyzerAgent(BaseAgent):
     def _metrics_hash(self, metrics):
         # Hash the latest metrics for caching
         import json
+
         return hashlib.sha256(json.dumps(metrics, sort_keys=True).encode()).hexdigest()
 
     async def _perform_check(self):
@@ -69,8 +70,8 @@ class AnalyzerAgent(BaseAgent):
                 self.logger.debug("No recent metrics to analyze")
                 return
 
-            # Perform comprehensive analysis
-            analysis_result = await self._analyze_system_health(recent_metrics)
+            # Perform comprehensive analysis using Ollama
+            analysis_result = await self._analyze_metrics_llm(recent_metrics)
 
             # Store analysis result
             self.analysis_history.append(analysis_result)
@@ -81,7 +82,9 @@ class AnalyzerAgent(BaseAgent):
             if self.persistence_enabled:
                 try:
                     await self.persistence.insert_analysis(
-                        timestamp=analysis_result.get("timestamp", datetime.now().isoformat()),
+                        timestamp=analysis_result.get(
+                            "timestamp", datetime.now().isoformat()
+                        ),
                         agent=self.agent_name,
                         summary=str(analysis_result.get("gpt_analysis", {})),
                         issues=str(analysis_result.get("issues_detected", [])),
@@ -93,8 +96,8 @@ class AnalyzerAgent(BaseAgent):
             # Check for threshold violations
             violations = await self._check_threshold_violations(recent_metrics)
 
-            # Detect trends
-            trends = await self._analyze_trends(recent_metrics)
+            # Detect trends using Ollama
+            trends = await self._analyze_trends_llm(recent_metrics)
 
             # Generate alerts if needed
             if violations or analysis_result.get("issues_detected"):
@@ -116,14 +119,14 @@ class AnalyzerAgent(BaseAgent):
         # For now, we'll simulate this by checking if we have any cached metrics
         return self.metric_history[-10:] if self.metric_history else []
 
-    async def _analyze_system_health(
-        self, metrics: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Use Ollama to analyze system health."""
+    async def _analyze_metrics_llm(self, metrics: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Use Ollama to analyze system health (LLM-based)."""
         if not metrics:
             return {"error": "No metrics to analyze"}
         latest_metrics = metrics[-1]
         context = self._build_analysis_context(metrics)
+        context = truncate_prompt(context, max_tokens=4096)
+        self.logger.debug(f"Ollama prompt length: {estimate_token_count(context)} tokens")
         metrics_hash = self._metrics_hash(latest_metrics)
         now = datetime.now()
         # Check cache
@@ -131,7 +134,7 @@ class AnalyzerAgent(BaseAgent):
         if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=self.cache_ttl):
             return cached
         try:
-            gpt_decision = await ollama_client.analyze_metrics(latest_metrics, context)
+            gpt_decision = await self.llm_client.analyze_metrics(latest_metrics, context)
             if hasattr(gpt_decision, "decision") and hasattr(gpt_decision, "reasoning"):
                 self.log_gpt_decision(gpt_decision.decision, gpt_decision.reasoning)
                 analysis_result = {
@@ -139,35 +142,22 @@ class AnalyzerAgent(BaseAgent):
                     "gpt_analysis": gpt_decision,
                     "issues_detected": self._extract_issues_from_gpt(gpt_decision),
                     "system_health_score": self._calculate_health_score(latest_metrics),
-                    "bottlenecks": latest_metrics.get("performance", {}).get(
-                        "bottlenecks", []
-                    ),
-                    "performance_trend": latest_metrics.get("performance", {}).get(
-                        "performance_trend", "unknown"
-                    ),
+                    "bottlenecks": latest_metrics.get("performance", {}).get("bottlenecks", []),
+                    "performance_trend": latest_metrics.get("performance", {}).get("performance_trend", "unknown"),
                     "llm_provider": self.llm_provider,
                 }
                 self.analysis_cache[metrics_hash] = analysis_result
                 return analysis_result
             elif isinstance(gpt_decision, dict):
-                self.logger.warning(
-                    "Ollama returned a dict instead of decision object. Using dict keys."
-                )
-                self.log_gpt_decision(
-                    gpt_decision.get("decision", "?"),
-                    gpt_decision.get("reasoning", "?"),
-                )
+                self.logger.warning("Ollama returned a dict instead of decision object. Using dict keys.")
+                self.log_gpt_decision(gpt_decision.get("decision", "?"), gpt_decision.get("reasoning", "?"))
                 analysis_result = {
                     "timestamp": now.isoformat(),
                     "gpt_analysis": gpt_decision,
                     "issues_detected": gpt_decision.get("issues_detected", []),
                     "system_health_score": self._calculate_health_score(latest_metrics),
-                    "bottlenecks": latest_metrics.get("performance", {}).get(
-                        "bottlenecks", []
-                    ),
-                    "performance_trend": latest_metrics.get("performance", {}).get(
-                        "performance_trend", "unknown"
-                    ),
+                    "bottlenecks": latest_metrics.get("performance", {}).get("bottlenecks", []),
+                    "performance_trend": latest_metrics.get("performance", {}).get("performance_trend", "unknown"),
                     "llm_provider": self.llm_provider,
                 }
                 self.analysis_cache[metrics_hash] = analysis_result
@@ -449,14 +439,19 @@ class AnalyzerAgent(BaseAgent):
 
         return violations
 
-    async def _analyze_trends(self, metrics: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze trends in system metrics using Ollama only."""
+    async def _analyze_trends_llm(self, metrics: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze trends in system metrics using Ollama only (LLM-based)."""
         if len(metrics) < 3:
             return {"error": "Insufficient data for trend analysis"}
         try:
-            gpt_decision = await ollama_client.detect_anomalies(
-                metrics, self.metric_history[-10:]
-            )
+            # Pass latest metrics dict and recent history to detect_anomalies
+            latest_metrics = metrics[-1]
+            historical_context = metrics[:-1] if len(metrics) > 1 else []
+            # Truncate context if needed
+            import json
+            context_str = truncate_prompt(json.dumps(historical_context), max_tokens=4096)
+            self.logger.debug(f"Ollama trend context length: {estimate_token_count(context_str)} tokens")
+            gpt_decision = await self.llm_client.detect_anomalies(latest_metrics, historical_context)
             trends = {
                 "timestamp": datetime.now().isoformat(),
                 "trend_analysis": {
@@ -464,13 +459,9 @@ class AnalyzerAgent(BaseAgent):
                     "reasoning": gpt_decision.reasoning,
                     "confidence": gpt_decision.confidence,
                     "risk_level": gpt_decision.risk_level,
-                    "anomalies_detected": gpt_decision.metadata.get(
-                        "anomalies_detected", []
-                    ),
+                    "anomalies_detected": gpt_decision.metadata.get("anomalies_detected", []),
                     "severity": gpt_decision.metadata.get("severity", "unknown"),
-                    "affected_metrics": gpt_decision.metadata.get(
-                        "affected_metrics", []
-                    ),
+                    "affected_metrics": gpt_decision.metadata.get("affected_metrics", []),
                 },
                 "calculated_trends": self._calculate_trends(metrics),
             }
@@ -621,7 +612,7 @@ class AnalyzerAgent(BaseAgent):
         self.logger.debug(f"Received metrics from {message.sender}")
 
         # Analyze the new metric
-        analysis_result = await self._analyze_system_health(self.metric_history[-10:])
+        analysis_result = await self._analyze_metrics_llm(self.metric_history[-10:])
         self.analysis_history.append(analysis_result)
         if len(self.analysis_history) > 50:
             self.analysis_history.pop(0)
@@ -654,74 +645,10 @@ class AnalyzerAgent(BaseAgent):
             ),
         }
 
-    async def _perform_gpt_analysis(
-        self, metrics: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """Perform GPT-based analysis of system metrics."""
-        try:
-            # Create context for GPT analysis
-            context = f"System analysis for {self.agent_name}"
-
-            # Use the new GPT client method
-            gpt_decision = await ollama_client.analyze_metrics(metrics, context)
-
-            # Log the GPT decision
-            self.log_gpt_decision(gpt_decision.decision, gpt_decision.reasoning)
-
-            return {
-                "gpt_analysis": gpt_decision.decision,
-                "reasoning": gpt_decision.reasoning,
-                "confidence": gpt_decision.confidence,
-                "risk_level": gpt_decision.risk_level,
-                "alternatives": gpt_decision.alternatives,
-                "metadata": gpt_decision.metadata,
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            self.logger.error(f"GPT analysis failed: {e}")
-            return None
-
-    async def _perform_trend_analysis(
-        self, metrics: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """Perform trend analysis using GPT."""
-        try:
-            # Get historical context for trend analysis
-            historical_context = (
-                self.metric_history[-10:]
-                if len(self.metric_history) >= 10
-                else self.metric_history
-            )
-
-            # Use the new GPT client method for anomaly detection
-            gpt_decision = await ollama_client.detect_anomalies(
-                metrics, historical_context
-            )
-
-            # Log the GPT decision
-            self.log_gpt_decision(gpt_decision.decision, gpt_decision.reasoning)
-
-            return {
-                "trend_analysis": gpt_decision.decision,
-                "reasoning": gpt_decision.reasoning,
-                "confidence": gpt_decision.confidence,
-                "risk_level": gpt_decision.risk_level,
-                "anomalies_detected": gpt_decision.metadata.get(
-                    "anomalies_detected", []
-                ),
-                "severity": gpt_decision.metadata.get("severity", "unknown"),
-                "affected_metrics": gpt_decision.metadata.get("affected_metrics", []),
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            self.logger.error(f"Trend analysis failed: {e}")
-            return None
-
     async def clear_llm_fallback(self):
         """Clear the LLM fallback state and broadcast an alert-clear message."""
         from utils.message_bus import message_bus, MessageType, MessagePriority
+
         config.clear_llm_fallback()
         await message_bus.broadcast(
             sender=self.agent_name,

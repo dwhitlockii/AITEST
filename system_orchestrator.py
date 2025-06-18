@@ -15,6 +15,7 @@ from utils.message_bus import message_bus, MessagePriority, MessageType
 from utils.logger import system_logger
 from config import config
 from utils.plugin_loader import load_plugins
+
 # Import new agents
 from agents.security_agent import SecurityAgent
 from agents.network_agent import NetworkAgent
@@ -50,18 +51,18 @@ class SystemOrchestrator:
         """Start the orchestrator and all agents."""
         system_logger.info("Starting system orchestrator and all agents...")
         self.startup_time = datetime.now()
-        
+
         # Clear any existing agent tasks before starting
         self.agent_tasks.clear()
-        
+
         await self._initialize_agents()
         await self._start_agents()
-        
+
         # Start background monitoring loops as tasks
         self.main_loop_task = asyncio.create_task(self._main_loop())
         self.system_monitor_task = asyncio.create_task(self._system_monitor_loop())
         self.health_check_task = asyncio.create_task(self._health_check_loop())
-        
+
         self.running = True
         system_logger.info("System orchestrator started with all background tasks.")
 
@@ -76,13 +77,13 @@ class SystemOrchestrator:
 
         try:
             # Cancel background monitoring tasks
-            if hasattr(self, 'main_loop_task'):
+            if hasattr(self, "main_loop_task"):
                 self.main_loop_task.cancel()
-            if hasattr(self, 'system_monitor_task'):
+            if hasattr(self, "system_monitor_task"):
                 self.system_monitor_task.cancel()
-            if hasattr(self, 'health_check_task'):
+            if hasattr(self, "health_check_task"):
                 self.health_check_task.cancel()
-            
+
             # Stop all agents
             await self._stop_agents()
             system_logger.shutdown("All agents stopped")
@@ -129,9 +130,13 @@ class SystemOrchestrator:
                     # Start each agent in its own asyncio task
                     task = asyncio.create_task(agent.start())
                     self.agent_tasks[name] = task
-                    system_logger.info(f"Agent '{name}' started successfully (task launched).")
+                    system_logger.info(
+                        f"Agent '{name}' started successfully (task launched)."
+                    )
                 else:
-                    system_logger.warning(f"Agent '{name}' was already running. Reset and started.")
+                    system_logger.warning(
+                        f"Agent '{name}' was already running. Reset and started."
+                    )
             except Exception as e:
                 system_logger.error(f"Failed to start agent '{name}': {e}")
 
@@ -474,7 +479,12 @@ class SystemOrchestrator:
             return {"status": "success", "command": command, "target": target}
         except Exception as e:
             system_logger.shutdown(f"Error sending command: {e}")
-            return {"status": "error", "error": str(e), "command": command, "target": target}
+            return {
+                "status": "error",
+                "error": str(e),
+                "command": command,
+                "target": target,
+            }
 
     def get_system_status(self) -> dict:
         """Return a summary of system health for test script."""

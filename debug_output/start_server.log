@@ -2676,3 +2676,48 @@ Call stack:
 2025-06-18 03:25:23,745 [DEBUG] Starting new HTTP connection (1): localhost:8000
 2025-06-18 03:25:28,803 [DEBUG] Startup check 7/60...
 2025-06-18 03:25:28,804 [DEBUG] Starting new HTTP connection (1): localhost:8000
+2025-06-18 17:06:23,064 [INFO] Command received: start (port=8000)
+2025-06-18 17:06:23,163 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 17:06:23,171 [INFO] Server started (PID 26172)
+2025-06-18 17:17:03,916 [INFO] Command received: start (port=8000)
+2025-06-18 17:17:03,964 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 17:17:03,972 [INFO] Server started (PID 19644)
+2025-06-18 17:36:16,382 [INFO] Command received: restart (port=8000)
+2025-06-18 17:36:17,100 [INFO] Server stopped (PID 19644)
+2025-06-18 17:36:19,102 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 17:36:19,109 [INFO] Server started (PID 38252)
+2025-06-18 17:51:56,784 [INFO] Command received: start (port=8000)
+2025-06-18 17:51:56,889 [INFO] Server already running (PID 38252) on port 8000
+2025-06-18 17:52:06,394 [INFO] Command received: restart (port=8000)
+2025-06-18 17:52:06,695 [INFO] Server stopped (PID 38252)
+2025-06-18 17:52:08,697 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 17:52:08,705 [INFO] Server started (PID 16828)
+2025-06-18 17:53:28,505 [INFO] Command received: start (port=8000)
+2025-06-18 17:53:28,558 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 17:53:28,564 [INFO] Server started (PID 39908)
+2025-06-18 18:12:50,931 [INFO] Command received: start (port=8000)
+2025-06-18 18:12:50,988 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:12:50,994 [INFO] Server started (PID 32576)
+2025-06-18 18:15:01,787 [INFO] Command received: start (port=8000)
+2025-06-18 18:15:01,828 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:15:01,836 [INFO] Server started (PID 36624)
+2025-06-18 18:36:26,249 [INFO] Command received: restart (port=8000)
+2025-06-18 18:36:26,727 [INFO] Server stopped (PID 36624)
+2025-06-18 18:36:28,731 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:36:28,738 [INFO] Server started (PID 17576)
+2025-06-18 18:49:50,586 [INFO] Command received: restart (port=8000)
+2025-06-18 18:49:51,150 [INFO] Server stopped (PID 17576)
+2025-06-18 18:49:53,155 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:49:53,163 [INFO] Server started (PID 28984)
+2025-06-18 18:52:20,736 [INFO] Command received: restart (port=8000)
+2025-06-18 18:52:20,781 [WARNING] No running process with PID 28984 (stale PID file)
+2025-06-18 18:52:21,784 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:52:21,790 [INFO] Server started (PID 3760)
+2025-06-18 18:58:21,670 [INFO] Command received: restart (port=8000)
+2025-06-18 18:58:21,711 [WARNING] No running process with PID 3760 (stale PID file)
+2025-06-18 18:58:22,712 [INFO] Starting web interface on http://127.0.0.1:8000
+2025-06-18 18:58:22,718 [INFO] Server started (PID 32504)
+2025-06-18 19:02:27,213 [INFO] Command received: status (port=8000)
+2025-06-18 19:02:27,333 [INFO] Server is running (PID 32504)
+2025-06-18 19:07:26,088 [INFO] Command received: stop (port=8000)
+2025-06-18 19:07:26,578 [INFO] Server stopped (PID 32504)

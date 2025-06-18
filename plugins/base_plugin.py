@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
+
 class BasePlugin(ABC):
     """
     Base class for all system plugins.
     Plugins must subclass this and implement required methods.
     """
+
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
 
@@ -22,4 +24,4 @@ class BasePlugin(ABC):
         """
         Return the plugin's configuration dictionary.
         """
-        pass 
+        pass

@@ -4,6 +4,7 @@ import sys
 from typing import List, Dict, Any
 from plugins.base_plugin import BasePlugin
 
+
 def load_plugins(config, system_context: Dict[str, Any]) -> List[BasePlugin]:
     """
     Load and register plugins as specified in config.plugins_to_load.
@@ -45,4 +46,4 @@ def load_plugins(config, system_context: Dict[str, Any]) -> List[BasePlugin]:
             print(f"[PluginLoader] Loaded plugin: {plugin_name}")
         except Exception as e:
             print(f"[PluginLoader] Failed to load plugin {plugin_name}: {e}")
-    return loaded_plugins 
+    return loaded_plugins

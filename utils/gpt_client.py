@@ -356,17 +356,19 @@ Respond in JSON format:
                     # Broadcast a critical alert and activate fallback if not already active
                     if not config.is_llm_fallback_active():
                         config.activate_llm_fallback("OpenAI API quota exceeded.")
-                        asyncio.create_task(message_bus.broadcast(
-                            sender="GPTClient",
-                            message_type=MessageType.ALERT,
-                            content={
-                                "type": "llm_quota_exceeded",
-                                "severity": "critical",
-                                "message": "OpenAI API quota exceeded. System is switching to fallback LLM until quota is restored.",
-                                "timestamp": datetime.now().isoformat(),
-                            },
-                            priority=MessagePriority.CRITICAL,
-                        ))
+                        asyncio.create_task(
+                            message_bus.broadcast(
+                                sender="GPTClient",
+                                message_type=MessageType.ALERT,
+                                content={
+                                    "type": "llm_quota_exceeded",
+                                    "severity": "critical",
+                                    "message": "OpenAI API quota exceeded. System is switching to fallback LLM until quota is restored.",
+                                    "timestamp": datetime.now().isoformat(),
+                                },
+                                priority=MessagePriority.CRITICAL,
+                            )
+                        )
                     raise LLMQuotaExceeded("OpenAI API quota exceeded.")
                 logger.warning(f"GPT request failed (attempt {attempt + 1}): {e}")
                 if attempt < self.retry_attempts - 1:

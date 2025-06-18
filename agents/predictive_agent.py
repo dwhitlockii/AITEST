@@ -14,7 +14,7 @@ import random
 
 from agents.base_agent import BaseAgent
 from utils.message_bus import MessageType, MessagePriority
-from utils.ollama_client import ollama_client
+from utils.ollama_client import ollama_client, truncate_prompt, estimate_token_count
 from config import config
 from utils.persistence import PersistenceManager
 
@@ -34,6 +34,8 @@ class PredictiveAgent(BaseAgent):
         self.predictions: List[Dict[str, Any]] = []
         self.forecast_models: Dict[str, Any] = {}
         self.anomaly_patterns: List[Dict[str, Any]] = []
+        self.trends: Dict[str, Any] = {}
+        self.metric_history: Dict[str, List[Dict[str, Any]]] = {}
 
         # Prediction settings
         self.prediction_horizon = 24  # hours
@@ -43,8 +45,11 @@ class PredictiveAgent(BaseAgent):
 
         # Metrics to predict
         self.predictable_metrics = [
-            "cpu_usage", "memory_usage", "disk_usage", 
-            "network_errors", "application_crashes"
+            "cpu_usage",
+            "memory_usage",
+            "disk_usage",
+            "network_errors",
+            "application_crashes",
         ]
 
         # Persistence integration
@@ -60,7 +65,11 @@ class PredictiveAgent(BaseAgent):
         await super().start()
 
     def _prediction_hash(self, predictions, trends):
-        return hashlib.sha256(json.dumps({"predictions": predictions, "trends": trends}, sort_keys=True).encode()).hexdigest()
+        return hashlib.sha256(
+            json.dumps(
+                {"predictions": predictions, "trends": trends}, sort_keys=True
+            ).encode()
+        ).hexdigest()
 
     async def _perform_check(self):
         """Perform predictive analysis and forecasting."""
@@ -77,7 +86,9 @@ class PredictiveAgent(BaseAgent):
             trends = await self._detect_trends()
 
             # Identify potential issues
-            potential_issues = await self._identify_potential_issues(predictions, trends)
+            potential_issues = await self._identify_potential_issues(
+                predictions, trends
+            )
 
             # Analyze prediction accuracy
             accuracy_analysis = await self._analyze_prediction_accuracy()
@@ -113,31 +124,40 @@ class PredictiveAgent(BaseAgent):
             # Get recent metrics from message bus or storage
             # For now, we'll simulate historical data collection
             current_time = datetime.now()
-            
+
             # Simulate collecting data from the last 24 hours
             for hour in range(24):
                 timestamp = current_time - timedelta(hours=hour)
-                
+
                 # Generate simulated historical data
                 historical_point = {
                     "timestamp": timestamp.isoformat(),
                     "cpu_usage": self._generate_simulated_metric("cpu_usage", hour),
-                    "memory_usage": self._generate_simulated_metric("memory_usage", hour),
+                    "memory_usage": self._generate_simulated_metric(
+                        "memory_usage", hour
+                    ),
                     "disk_usage": self._generate_simulated_metric("disk_usage", hour),
-                    "network_errors": self._generate_simulated_metric("network_errors", hour),
-                    "application_crashes": self._generate_simulated_metric("application_crashes", hour)
+                    "network_errors": self._generate_simulated_metric(
+                        "network_errors", hour
+                    ),
+                    "application_crashes": self._generate_simulated_metric(
+                        "application_crashes", hour
+                    ),
                 }
-                
+
                 self.historical_data.append(historical_point)
-            
+
             # Keep only recent data (last 7 days)
             cutoff_time = current_time - timedelta(days=7)
             self.historical_data = [
-                data for data in self.historical_data 
+                data
+                for data in self.historical_data
                 if datetime.fromisoformat(data["timestamp"]) > cutoff_time
             ]
-            
-            self.logger.debug(f"Collected {len(self.historical_data)} historical data points")
+
+            self.logger.debug(
+                f"Collected {len(self.historical_data)} historical data points"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to collect historical data: {e}")
@@ -151,96 +171,125 @@ class PredictiveAgent(BaseAgent):
                 "memory_usage": 60.0,
                 "disk_usage": 75.0,
                 "network_errors": 2.0,
-                "application_crashes": 0.5
+                "application_crashes": 0.5,
             }
-            
+
             base_value = base_values.get(metric_name, 50.0)
-            
+
             # Add some realistic variation
             # Simulate daily patterns (higher usage during work hours)
             work_hour_factor = 1.5 if 8 <= hour <= 18 else 0.8
-            
+
             # Add some random noise
             noise = np.random.normal(0, 5)
-            
+
             # Add some trend (gradual increase over time)
             trend = hour * 0.1
-            
+
             value = base_value * work_hour_factor + noise + trend
-            
+
             # Ensure values are within reasonable bounds
             if metric_name in ["cpu_usage", "memory_usage", "disk_usage"]:
                 value = max(0, min(100, value))
             else:
                 value = max(0, value)
-            
+
             return round(value, 2)
-            
+
         except Exception as e:
             self.logger.error(f"Failed to generate simulated metric: {e}")
             return 50.0
 
     async def _generate_predictions(self):
         # Throttle/caching logic
-        if not hasattr(self, 'prediction_cache'):
+        if not hasattr(self, "prediction_cache"):
             self.prediction_cache = {}
         cache_ttl = 300  # 5 min
         now = datetime.now()
-        predictions = await self._collect_historical_data()
-        trends = await self._detect_trends()
-        pred_hash = self._prediction_hash(predictions, trends)
-        cached = self.prediction_cache.get(pred_hash)
-        if cached and (now - datetime.fromisoformat(cached["timestamp"])) < timedelta(seconds=cache_ttl):
+        predictions_hash = self._prediction_hash(getattr(self, "predictions", {}), getattr(self, "trends", {}))
+        cached = self.prediction_cache.get(predictions_hash)
+        if cached and (
+            now - datetime.fromisoformat(cached["timestamp"])
+        ) < timedelta(seconds=cache_ttl):
             return cached["result"]
         try:
-            result = await ollama_client.analyze_metrics({"predictions": predictions, "trends": trends}, "Predictive analysis")
-            # If result is an OllamaDecision, convert to dict
-            if hasattr(result, 'dict'):
-                result = result.dict()
-            # Ensure result is a dict with 'predictions' key for downstream code
-            if not isinstance(result, dict) or 'predictions' not in result:
-                result = {"predictions": {}, "error": "Invalid LLM result structure"}
-            self.prediction_cache[pred_hash] = {"result": result, "timestamp": now.isoformat()}
+            prediction_data = {
+                "predictions": getattr(self, "predictions", {}),
+                "trends": getattr(self, "trends", {}),
+            }
+            # Validate input data
+            if not isinstance(prediction_data["predictions"], dict) or not isinstance(prediction_data["trends"], dict):
+                self.logger.error("Invalid input data for LLM analysis")
+                return {"error": "Invalid input data for LLM analysis"}
+            analysis_result = await self.llm_client.analyze_metrics(
+                prediction_data, "Predictive analysis"
+            )
+            # If analysis_result is OllamaDecision, convert to dict for serialization
+            if hasattr(analysis_result, "dict"):
+                analysis_result_dict = analysis_result.dict()
+                result = {
+                    "timestamp": now.isoformat(),
+                    "prediction_score": analysis_result_dict.get("confidence", 0.0),
+                    "confidence": analysis_result_dict.get("confidence", 0.0),
+                    "analysis": analysis_result_dict.get("decision", "Analysis failed"),
+                }
+            else:
+                result = {
+                    "timestamp": now.isoformat(),
+                    "prediction_score": getattr(analysis_result, "confidence", 0.0),
+                    "confidence": getattr(analysis_result, "confidence", 0.0),
+                    "analysis": getattr(analysis_result, "decision", "Analysis failed"),
+                }
+            self.prediction_cache[predictions_hash] = {
+                "result": result,
+                "timestamp": now.isoformat(),
+            }
             return result
         except Exception as e:
-            self.logger.error(f"LLM predictive analysis failed: {e}")
-            return {"predictions": {}, "error": str(e)}
+            self.logger.error(f"Failed to generate predictions: {e}")
+            return {
+                "timestamp": now.isoformat(),
+                "prediction_score": 0.0,
+                "confidence": 0.0,
+                "analysis": "Analysis failed",
+            }
 
     async def _predict_metric(self, metric_name: str) -> Dict[str, Any]:
         """Predict a specific metric."""
         try:
             # Extract historical data for this metric
             metric_data = [
-                data[metric_name] for data in self.historical_data 
+                data[metric_name]
+                for data in self.historical_data
                 if metric_name in data
             ]
-            
+
             if len(metric_data) < self.min_data_points:
                 return {
                     "prediction": None,
                     "confidence": 0.0,
                     "reason": "Insufficient historical data",
-                    "trend": "unknown"
+                    "trend": "unknown",
                 }
-            
+
             # Simple linear regression for prediction
             x = np.arange(len(metric_data))
             y = np.array(metric_data)
-            
+
             # Calculate trend
             slope, intercept = np.polyfit(x, y, 1)
-            
+
             # Predict next value
             next_x = len(metric_data)
             prediction = slope * next_x + intercept
-            
+
             # Calculate confidence based on R-squared
             y_pred = slope * x + intercept
             ss_res = np.sum((y - y_pred) ** 2)
             ss_tot = np.sum((y - np.mean(y)) ** 2)
             r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
             confidence = max(0, min(1, r_squared))
-            
+
             # Determine trend
             if slope > 0.5:
                 trend = "increasing"
@@ -248,17 +297,17 @@ class PredictiveAgent(BaseAgent):
                 trend = "decreasing"
             else:
                 trend = "stable"
-            
+
             # Apply bounds for certain metrics
             if metric_name in ["cpu_usage", "memory_usage", "disk_usage"]:
                 prediction = max(0, min(100, prediction))
-            
+
             return {
                 "prediction": round(prediction, 2),
                 "confidence": round(confidence, 3),
                 "trend": trend,
                 "slope": round(slope, 3),
-                "data_points": len(metric_data)
+                "data_points": len(metric_data),
             }
 
         except Exception as e:
@@ -267,21 +316,18 @@ class PredictiveAgent(BaseAgent):
                 "prediction": None,
                 "confidence": 0.0,
                 "reason": str(e),
-                "trend": "unknown"
+                "trend": "unknown",
             }
 
     async def _detect_trends(self) -> Dict[str, Any]:
         """Detect trends in historical data."""
         try:
-            trends = {
-                "timestamp": datetime.now().isoformat(),
-                "trends": {}
-            }
-            
+            trends = {"timestamp": datetime.now().isoformat(), "trends": {}}
+
             for metric in self.predictable_metrics:
                 metric_trend = await self._analyze_metric_trend(metric)
                 trends["trends"][metric] = metric_trend
-            
+
             return trends
 
         except Exception as e:
@@ -289,204 +335,171 @@ class PredictiveAgent(BaseAgent):
             return {"error": str(e)}
 
     async def _analyze_metric_trend(self, metric_name: str) -> Dict[str, Any]:
-        """Analyze trend for a specific metric."""
+        """Analyze trends in a specific metric using Ollama only (LLM-based)."""
         try:
-            # Extract historical data for this metric
-            metric_data = [
-                data[metric_name] for data in self.historical_data 
-                if metric_name in data
-            ]
-            
-            if len(metric_data) < 10:
-                return {
-                    "trend": "unknown",
-                    "strength": 0.0,
-                    "volatility": 0.0,
-                    "seasonality": "none"
+            metric_history = self.metric_history.get(metric_name, [])
+            if len(metric_history) < 3:
+                return {"error": "Insufficient data for trend analysis"}
+            latest_metrics = metric_history[-1]
+            historical_context = metric_history[:-1] if len(metric_history) > 1 else []
+            # Truncate context if needed
+            context_str = truncate_prompt(json.dumps(historical_context), max_tokens=4096)
+            self.logger.debug(f"Ollama trend context length: {estimate_token_count(context_str)} tokens")
+            gpt_decision = await self.llm_client.detect_anomalies(latest_metrics, historical_context)
+            # If OllamaDecision, use attributes; if dict, use keys
+            if hasattr(gpt_decision, "dict"):
+                gpt_decision_dict = gpt_decision.dict()
+                trends = {
+                    "timestamp": datetime.now().isoformat(),
+                    "trend_analysis": {
+                        "decision": gpt_decision_dict.get("decision", None),
+                        "reasoning": gpt_decision_dict.get("reasoning", None),
+                        "confidence": gpt_decision_dict.get("confidence", 0.0),
+                        "risk_level": gpt_decision_dict.get("risk_level", "unknown"),
+                        "anomalies_detected": gpt_decision_dict.get("metadata", {}).get("anomalies_detected", []),
+                        "severity": gpt_decision_dict.get("metadata", {}).get("severity", "unknown"),
+                        "affected_metrics": gpt_decision_dict.get("metadata", {}).get("affected_metrics", []),
+                    },
                 }
-            
-            # Calculate trend strength
-            x = np.arange(len(metric_data))
-            y = np.array(metric_data)
-            
-            slope, intercept = np.polyfit(x, y, 1)
-            
-            # Calculate trend strength (correlation coefficient)
-            correlation = np.corrcoef(x, y)[0, 1] if len(x) > 1 else 0
-            trend_strength = abs(correlation) if not np.isnan(correlation) else 0
-            
-            # Calculate volatility (standard deviation)
-            volatility = np.std(y) if len(y) > 1 else 0
-            
-            # Determine trend direction
-            if slope > 0.1:
-                trend = "increasing"
-            elif slope < -0.1:
-                trend = "decreasing"
             else:
-                trend = "stable"
-            
-            # Detect seasonality (simplified)
-            if len(metric_data) >= 24:  # At least 24 hours of data
-                # Check for daily patterns
-                daily_values = metric_data[-24:]
-                morning_avg = np.mean(daily_values[8:12])  # 8 AM - 12 PM
-                evening_avg = np.mean(daily_values[18:22])  # 6 PM - 10 PM
-                
-                if abs(morning_avg - evening_avg) > np.std(daily_values) * 0.5:
-                    seasonality = "daily"
-                else:
-                    seasonality = "none"
-            else:
-                seasonality = "unknown"
-            
-            return {
-                "trend": trend,
-                "strength": round(trend_strength, 3),
-                "volatility": round(volatility, 3),
-                "seasonality": seasonality,
-                "slope": round(slope, 3)
-            }
-
+                trends = {
+                    "timestamp": datetime.now().isoformat(),
+                    "trend_analysis": {
+                        "decision": getattr(gpt_decision, "decision", None),
+                        "reasoning": getattr(gpt_decision, "reasoning", None),
+                        "confidence": getattr(gpt_decision, "confidence", 0.0),
+                        "risk_level": getattr(gpt_decision, "risk_level", "unknown"),
+                        "anomalies_detected": getattr(gpt_decision, "metadata", {}).get("anomalies_detected", []),
+                        "severity": getattr(gpt_decision, "metadata", {}).get("severity", "unknown"),
+                        "affected_metrics": getattr(gpt_decision, "metadata", {}).get("affected_metrics", []),
+                    },
+                }
+            return trends
         except Exception as e:
-            self.logger.error(f"Failed to analyze trend for {metric_name}: {e}")
+            self.logger.error(f"Trend analysis failed: {e}")
             return {
-                "trend": "unknown",
-                "strength": 0.0,
-                "volatility": 0.0,
-                "seasonality": "none"
+                "timestamp": datetime.now().isoformat(),
+                "error": f"Trend analysis failed: {str(e)}",
             }
 
-    async def _identify_potential_issues(self, predictions: Dict[str, Any], trends: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify potential issues based on predictions and trends."""
+    async def _identify_potential_issues(
+        self, predictions: Dict[str, Any], trends: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Identify potential issues from predictions and trends."""
         try:
             potential_issues = []
-            # If predictions is an OllamaDecision, convert to dict
-            if hasattr(predictions, 'dict'):
-                predictions = predictions.dict()
-            # If trends is an OllamaDecision, convert to dict
-            if hasattr(trends, 'dict'):
-                trends = trends.dict()
             # Check predictions for potential issues
-            for metric_name, prediction_data in predictions.get("predictions", {}).items():
-                # If prediction_data is an OllamaDecision, convert to dict
-                if hasattr(prediction_data, 'dict'):
-                    prediction_data = prediction_data.dict()
+            pred_data = predictions.get("predictions", {}) if isinstance(predictions, dict) else {}
+            for metric_name, prediction_data in pred_data.items():
+                if not isinstance(prediction_data, dict):
+                    continue
                 prediction = prediction_data.get("prediction")
                 confidence = prediction_data.get("confidence", 0)
-                if prediction is not None and confidence > self.confidence_threshold:
-                    # Check for critical thresholds
-                    if metric_name == "cpu_usage" and prediction > 90:
-                        potential_issues.append({
-                            "type": "predicted_cpu_critical",
-                            "severity": "high",
-                            "description": f"CPU usage predicted to reach {prediction}% in next {self.prediction_horizon} hours",
-                            "metric": metric_name,
-                            "predicted_value": prediction,
-                            "confidence": confidence,
-                            "timestamp": datetime.now().isoformat()
-                        })
-                    elif metric_name == "memory_usage" and prediction > 95:
-                        potential_issues.append({
-                            "type": "predicted_memory_critical",
-                            "severity": "high",
-                            "description": f"Memory usage predicted to reach {prediction}% in next {self.prediction_horizon} hours",
-                            "metric": metric_name,
-                            "predicted_value": prediction,
-                            "confidence": confidence,
-                            "timestamp": datetime.now().isoformat()
-                        })
-                    elif metric_name == "disk_usage" and prediction > 95:
-                        potential_issues.append({
-                            "type": "predicted_disk_critical",
-                            "severity": "high",
-                            "description": f"Disk usage predicted to reach {prediction}% in next {self.prediction_horizon} hours",
-                            "metric": metric_name,
-                            "predicted_value": prediction,
-                            "confidence": confidence,
-                            "timestamp": datetime.now().isoformat()
-                        })
+                if confidence < 0.5:
+                    potential_issues.append({
+                        "type": "low_confidence_prediction",
+                        "metric": metric_name,
+                        "confidence": confidence,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+                if prediction is not None and prediction > 90:
+                    potential_issues.append({
+                        "type": "high_prediction_value",
+                        "metric": metric_name,
+                        "value": prediction,
+                        "timestamp": datetime.now().isoformat(),
+                    })
             # Check trends for concerning patterns
-            for metric_name, trend_data in trends.get("trends", {}).items():
-                # If trend_data is an OllamaDecision, convert to dict
-                if hasattr(trend_data, 'dict'):
-                    trend_data = trend_data.dict()
-                trend = trend_data.get("trend")
-                strength = trend_data.get("strength", 0)
+            trend_data = trends.get("trends", {}) if isinstance(trends, dict) else {}
+            for metric_name, trend_info in trend_data.items():
+                if not isinstance(trend_info, dict):
+                    continue
+                trend = trend_info.get("trend")
+                strength = trend_info.get("strength", 0)
                 if trend == "increasing" and strength > 0.7:
-                    if metric_name in ["cpu_usage", "memory_usage", "disk_usage"]:
-                        potential_issues.append({
-                            "type": "concerning_trend",
-                            "severity": "medium",
-                            "description": f"Strong increasing trend detected for {metric_name}",
-                            "metric": metric_name,
-                            "trend": trend,
-                            "strength": strength,
-                            "timestamp": datetime.now().isoformat()
-                        })
+                    potential_issues.append({
+                        "type": "strong_increasing_trend",
+                        "metric": metric_name,
+                        "strength": strength,
+                        "timestamp": datetime.now().isoformat(),
+                    })
             return potential_issues
         except Exception as e:
             self.logger.error(f"Failed to identify potential issues: {e}")
             return []
 
     async def _analyze_prediction_accuracy(self) -> Dict[str, Any]:
-        """Analyze the accuracy of previous predictions."""
+        """Analyze prediction accuracy using Ollama only (LLM-based)."""
         try:
-            if len(self.predictions) < 2:
-                return {
-                    "accuracy": 0.0,
-                    "total_predictions": 0,
-                    "accurate_predictions": 0,
-                    "average_error": 0.0
-                }
-            
-            # Compare recent predictions with actual data
+            if not hasattr(self, "prediction_accuracy_cache"):
+                self.prediction_accuracy_cache = {}
+            cache_ttl = 300  # 5 min
+            now = datetime.now()
+            accuracy_hash = self._prediction_hash(getattr(self, "predictions", {}), getattr(self, "trends", {}))
+            cached = self.prediction_accuracy_cache.get(accuracy_hash)
+            if cached and (
+                now - datetime.fromisoformat(cached["timestamp"])
+            ) < timedelta(seconds=cache_ttl):
+                return cached["result"]
             accuracy_data = {
-                "total_predictions": 0,
-                "accurate_predictions": 0,
-                "total_error": 0.0
+                "predictions": getattr(self, "predictions", {}),
+                "trends": getattr(self, "trends", {}),
             }
-            
-            # For now, we'll use a simplified accuracy calculation
-            # In a real implementation, you'd compare predictions with actual outcomes
-            
-            accuracy = 0.85  # Simulated accuracy
-            average_error = 5.2  # Simulated average error
-            
-            return {
-                "accuracy": round(accuracy, 3),
-                "total_predictions": accuracy_data["total_predictions"],
-                "accurate_predictions": int(accuracy_data["total_predictions"] * accuracy),
-                "average_error": round(average_error, 2)
+            # Validate input data
+            if not isinstance(accuracy_data["predictions"], dict) or not isinstance(accuracy_data["trends"], dict):
+                self.logger.error("Invalid input data for LLM analysis")
+                return {"error": "Invalid input data for LLM analysis"}
+            analysis_result = await self.llm_client.analyze_metrics(
+                accuracy_data, "Prediction accuracy analysis"
+            )
+            if hasattr(analysis_result, "dict"):
+                analysis_result_dict = analysis_result.dict()
+                result = {
+                    "timestamp": now.isoformat(),
+                    "accuracy_score": analysis_result_dict.get("confidence", 0.0),
+                    "confidence": analysis_result_dict.get("confidence", 0.0),
+                    "analysis": analysis_result_dict.get("decision", "Analysis failed"),
+                }
+            else:
+                result = {
+                    "timestamp": now.isoformat(),
+                    "accuracy_score": getattr(analysis_result, "confidence", 0.0),
+                    "confidence": getattr(analysis_result, "confidence", 0.0),
+                    "analysis": getattr(analysis_result, "decision", "Analysis failed"),
+                }
+            self.prediction_accuracy_cache[accuracy_hash] = {
+                "result": result,
+                "timestamp": now.isoformat(),
             }
-
+            return result
         except Exception as e:
             self.logger.error(f"Failed to analyze prediction accuracy: {e}")
             return {
-                "accuracy": 0.0,
-                "total_predictions": 0,
-                "accurate_predictions": 0,
-                "average_error": 0.0
+                "timestamp": now.isoformat(),
+                "accuracy_score": 0.0,
+                "confidence": 0.0,
+                "analysis": "Analysis failed",
             }
 
-    async def _update_models(self, predictions: Dict[str, Any], accuracy_analysis: Dict[str, Any]):
-        """Update predictive models based on accuracy analysis."""
+    async def _update_models(
+        self, predictions: Dict[str, Any], accuracy_analysis: Dict[str, Any]
+    ):
+        """Update predictive models using LLM analysis results."""
         try:
-            # If predictions is an OllamaDecision, convert to dict
-            if hasattr(predictions, 'dict'):
-                predictions = predictions.dict()
-            model_update = {
-                "timestamp": datetime.now().isoformat(),
-                "accuracy": accuracy_analysis.get("accuracy", 0),
-                "predictions_count": len(predictions.get("predictions", {})),
-                "model_version": "1.0"
-            }
-            # In a real implementation, you'd update ML models here
-            self.logger.debug(f"Models updated - Accuracy: {accuracy_analysis.get('accuracy', 0)}")
+            # Use LLM analysis to update models (simulate)
+            analysis_result = await self.llm_client.analyze_metrics(
+                {"predictions": predictions, "accuracy": accuracy_analysis}, "Model update analysis"
+            )
+            self.forecast_models["latest"] = analysis_result.dict() if hasattr(analysis_result, "dict") else analysis_result
         except Exception as e:
             self.logger.error(f"Failed to update models: {e}")
 
-    async def _broadcast_predictions(self, predictions: Dict[str, Any], trends: Dict[str, Any], potential_issues: List[Dict[str, Any]]):
+    async def _broadcast_predictions(
+        self,
+        predictions: Dict[str, Any],
+        trends: Dict[str, Any],
+        potential_issues: List[Dict[str, Any]],
+    ):
         """Broadcast predictions to other agents."""
         try:
             prediction_status = {
@@ -495,40 +508,41 @@ class PredictiveAgent(BaseAgent):
                 "potential_issues": potential_issues,
                 "prediction_horizon": self.prediction_horizon,
                 "confidence_threshold": self.confidence_threshold,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             await self.message_bus.broadcast(
                 sender=self.agent_name,
                 message_type=MessageType.PREDICTION_UPDATE,
                 content=prediction_status,
-                priority=MessagePriority.HIGH if potential_issues else MessagePriority.NORMAL
+                priority=(
+                    MessagePriority.HIGH if potential_issues else MessagePriority.NORMAL
+                ),
             )
-            
+
         except Exception as e:
             self.logger.error(f"Failed to broadcast predictions: {e}")
 
     async def _setup_subscriptions(self):
         """Set up message subscriptions for the predictive agent."""
         await super()._setup_subscriptions()
-        
+
         # Subscribe to metric data for historical analysis
-        await self.message_bus.subscribe(MessageType.METRIC_DATA, self._handle_metric_data)
+        await self.message_bus.subscribe(
+            MessageType.METRIC_DATA, self._handle_metric_data
+        )
         self.subscribed_message_types.append(MessageType.METRIC_DATA)
 
     async def _handle_metric_data(self, message):
         """Handle incoming metric data for historical analysis."""
         if message.sender == self.agent_name:
             return  # Ignore our own messages
-        
+
         # Store metric data for historical analysis
-        metric_data = {
-            "timestamp": datetime.now().isoformat(),
-            **message.content
-        }
-        
+        metric_data = {"timestamp": datetime.now().isoformat(), **message.content}
+
         self.historical_data.append(metric_data)
-        
+
         # Keep only recent data
         if len(self.historical_data) > 1000:
             self.historical_data = self.historical_data[-1000:]
@@ -545,6 +559,6 @@ class PredictiveAgent(BaseAgent):
             "model_performance": {
                 "accuracy": 0.85,  # Simulated
                 "total_predictions": len(self.predictions),
-                "average_error": 5.2  # Simulated
-            }
-        } 
+                "average_error": 5.2,  # Simulated
+            },
+        }

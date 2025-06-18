@@ -6,6 +6,7 @@ This provides the same interface as GPT client but uses locally hosted models.
 import os
 import asyncio
 import json
+
 # NOTE: aiohttp is required for OllamaClient. Install with: pip install aiohttp
 import aiohttp
 from typing import Dict, Any, List, Optional
@@ -46,10 +47,12 @@ class OllamaClient:
     def __init__(self):
         self.base_url = getattr(config.ollama, "url", "http://localhost:11434")
         self.default_model = getattr(config.ollama, "model", "mistral:latest")
-        self.timeout = getattr(config.ollama, "timeout", 60)  # Increased from 30 to 60 seconds
+        self.timeout = getattr(
+            config.ollama, "timeout", 60
+        )  # Increased from 30 to 60 seconds
         self.retry_attempts = getattr(config.ollama, "retry_attempts", 3)
         self.retry_delay = getattr(config.ollama, "retry_delay", 2)
-        
+
         # Decision history for context
         self.decision_history: List[OllamaDecision] = []
         self.max_history = 50
@@ -59,15 +62,19 @@ class OllamaClient:
         self.last_model_check = None
         self.model_check_interval = 300  # 5 minutes
 
-        logger.info(f"OllamaClient initialized with model: {self.default_model}, timeout: {self.timeout}s")
+        logger.info(
+            f"OllamaClient initialized with model: {self.default_model}, timeout: {self.timeout}s"
+        )
 
     async def _ensure_model(self):
         """Ensure the default model is available."""
         if not self.available_models:
             await self._refresh_models()
-        
+
         if self.default_model not in self.available_models:
-            logger.warning(f"Default model {self.default_model} not available. Available: {self.available_models}")
+            logger.warning(
+                f"Default model {self.default_model} not available. Available: {self.available_models}"
+            )
             if self.available_models:
                 self.default_model = self.available_models[0]
                 logger.info(f"Using fallback model: {self.default_model}")
@@ -80,7 +87,9 @@ class OllamaClient:
                 async with session.get(f"{self.base_url}/api/tags") as response:
                     if response.status == 200:
                         data = await response.json()
-                        self.available_models = [model["name"] for model in data.get("models", [])]
+                        self.available_models = [
+                            model["name"] for model in data.get("models", [])
+                        ]
                         self.last_model_check = datetime.now()
                         logger.info(f"Available Ollama models: {self.available_models}")
                     else:
@@ -93,9 +102,9 @@ class OllamaClient:
     ) -> OllamaDecision:
         """Analyze system metrics using Ollama."""
         await self._ensure_model()
-        
+
         prompt = self._build_analysis_prompt(metrics, context)
-        
+
         try:
             response = await self._make_request(prompt)
             return self._parse_analysis_response(response)
@@ -104,7 +113,7 @@ class OllamaClient:
             return self._create_fallback_decision(
                 "Monitor system closely",
                 f"Analysis failed: {str(e)}. Recommend monitoring.",
-                0.3
+                0.3,
             )
 
     async def recommend_remediation(
@@ -112,9 +121,9 @@ class OllamaClient:
     ) -> OllamaDecision:
         """Get remediation recommendations from Ollama."""
         await self._ensure_model()
-        
+
         prompt = self._build_remediation_prompt(issue, metrics, available_actions)
-        
+
         try:
             response = await self._make_request(prompt)
             return self._parse_remediation_response(response)
@@ -123,17 +132,19 @@ class OllamaClient:
             return self._create_fallback_decision(
                 "Monitor and investigate",
                 f"Remediation analysis failed: {str(e)}. Recommend manual investigation.",
-                0.2
+                0.2,
             )
 
     async def detect_anomalies(
-        self, metrics: Dict[str, Any], historical_context: Optional[List[Dict[str, Any]]] = None
+        self,
+        metrics: Dict[str, Any],
+        historical_context: Optional[List[Dict[str, Any]]] = None,
     ) -> OllamaDecision:
         """Detect anomalies using Ollama."""
         await self._ensure_model()
-        
+
         prompt = self._build_anomaly_prompt(metrics, historical_context or [])
-        
+
         try:
             response = await self._make_request(prompt)
             return self._parse_anomaly_response(response)
@@ -142,7 +153,7 @@ class OllamaClient:
             return self._create_fallback_decision(
                 "Continue monitoring",
                 f"Anomaly detection failed: {str(e)}. Continue monitoring.",
-                0.3
+                0.3,
             )
 
     def _build_analysis_prompt(self, metrics: Dict[str, Any], context: str) -> str:
@@ -258,12 +269,14 @@ Respond in JSON format:
         """Format recent decision history for context."""
         if not self.decision_history:
             return "No recent decisions."
-        
+
         recent = self.decision_history[-3:]  # Last 3 decisions
         formatted = []
         for decision in recent:
-            formatted.append(f"- {decision.decision} (confidence: {decision.confidence}, risk: {decision.risk_level})")
-        
+            formatted.append(
+                f"- {decision.decision} (confidence: {decision.confidence}, risk: {decision.risk_level})"
+            )
+
         return "\n".join(formatted)
 
     @classmethod
@@ -271,7 +284,10 @@ Respond in JSON format:
         with cls._lock:
             now = datetime.now()
             # Remove timestamps older than 60s
-            while cls._request_timestamps and (now - cls._request_timestamps[0]).total_seconds() > 60:
+            while (
+                cls._request_timestamps
+                and (now - cls._request_timestamps[0]).total_seconds() > 60
+            ):
                 cls._request_timestamps.popleft()
             return len(cls._request_timestamps) < cls._rate_limit
 
@@ -282,14 +298,18 @@ Respond in JSON format:
 
     async def _make_request(self, prompt: str) -> str:
         if not self._can_make_request():
-            raise Exception("Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback.")
+            raise Exception(
+                "Ollama LLM rate limit exceeded (max 5 requests/minute). Try again later or use fallback."
+            )
         self._record_request()
         await self._ensure_model()
-        
+
         for attempt in range(self.retry_attempts):
             try:
-                logger.info(f"Making Ollama request (attempt {attempt + 1}) with model {self.default_model}")
-                
+                logger.info(
+                    f"Making Ollama request (attempt {attempt + 1}) with model {self.default_model}"
+                )
+
                 payload = {
                     "model": self.default_model,
                     "prompt": prompt,
@@ -299,64 +319,63 @@ Respond in JSON format:
                         "top_p": 0.9,
                         "num_predict": 500,  # Reduced from 1000 to 500 for faster responses
                         "top_k": 40,
-                        "repeat_penalty": 1.1
-                    }
+                        "repeat_penalty": 1.1,
+                    },
                 }
-                
+
                 timeout = aiohttp.ClientTimeout(total=self.timeout)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(
-                        f"{self.base_url}/api/generate",
-                        json=payload
+                        f"{self.base_url}/api/generate", json=payload
                     ) as response:
                         if response.status == 200:
                             data = await response.json()
                             return data.get("response", "")
                         else:
-                            logger.warning(f"Ollama request failed (attempt {attempt + 1}): {response.status}")
-                            
+                            logger.warning(
+                                f"Ollama request failed (attempt {attempt + 1}): {response.status}"
+                            )
+
             except asyncio.TimeoutError:
                 logger.warning(f"Ollama request timeout (attempt {attempt + 1})")
             except Exception as e:
                 logger.warning(f"Ollama request failed (attempt {attempt + 1}): {e}")
-            
+
             if attempt < self.retry_attempts - 1:
                 await asyncio.sleep(self.retry_delay)
-        
+
         raise Exception("All Ollama request attempts failed")
 
     def _parse_analysis_response(self, response: str) -> OllamaDecision:
         """Parse analysis response from Ollama."""
         try:
             # Try to extract JSON from response
-            json_start = response.find('{')
-            json_end = response.rfind('}') + 1
-            
+            json_start = response.find("{")
+            json_end = response.rfind("}") + 1
+
             if json_start >= 0 and json_end > json_start:
                 json_str = response[json_start:json_end]
                 data = json.loads(json_str)
             else:
                 # Fallback parsing
                 data = self._parse_fallback_response(response)
-            
+
             decision = OllamaDecision(
                 decision=data.get("decision", "Monitor system"),
                 reasoning=data.get("reasoning", "No reasoning provided"),
                 confidence=float(data.get("confidence", 0.5)),
                 risk_level=data.get("risk_level", "medium"),
                 alternatives=data.get("alternatives", []),
-                metadata=data.get("metadata", {})
+                metadata=data.get("metadata", {}),
             )
-            
+
             self._add_to_history(decision)
             return decision
-            
+
         except Exception as e:
             logger.error(f"Failed to parse analysis response: {e}")
             return self._create_fallback_decision(
-                "Continue monitoring",
-                f"Failed to parse response: {str(e)}",
-                0.3
+                "Continue monitoring", f"Failed to parse response: {str(e)}", 0.3
             )
 
     def _parse_remediation_response(self, response: str) -> OllamaDecision:
@@ -371,7 +390,7 @@ Respond in JSON format:
         """Parse response when JSON extraction fails."""
         # Simple keyword-based parsing
         response_lower = response.lower()
-        
+
         decision = "Monitor system"
         if "critical" in response_lower or "emergency" in response_lower:
             decision = "Immediate attention required"
@@ -379,15 +398,15 @@ Respond in JSON format:
             decision = "Investigate warning"
         elif "normal" in response_lower or "healthy" in response_lower:
             decision = "System appears normal"
-        
+
         reasoning = response[:200] + "..." if len(response) > 200 else response
-        
+
         confidence = 0.5
         if "high confidence" in response_lower or "certain" in response_lower:
             confidence = 0.8
         elif "low confidence" in response_lower or "uncertain" in response_lower:
             confidence = 0.3
-        
+
         risk_level = "medium"
         if "critical" in response_lower:
             risk_level = "critical"
@@ -395,14 +414,14 @@ Respond in JSON format:
             risk_level = "high"
         elif "low" in response_lower:
             risk_level = "low"
-        
+
         return {
             "decision": decision,
             "reasoning": reasoning,
             "confidence": confidence,
             "risk_level": risk_level,
             "alternatives": ["Monitor closely", "Check logs"],
-            "metadata": {"parsing_method": "fallback"}
+            "metadata": {"parsing_method": "fallback"},
         }
 
     def _create_fallback_decision(
@@ -415,9 +434,9 @@ Respond in JSON format:
             confidence=confidence,
             risk_level="medium",
             alternatives=["Monitor system", "Check logs"],
-            metadata={"source": "fallback", "ollama_available": False}
+            metadata={"source": "fallback", "ollama_available": False},
         )
-        
+
         self._add_to_history(fallback)
         return fallback
 
@@ -454,3 +473,19 @@ Respond in JSON format:
 
 # Singleton instance for agent use
 ollama_client = OllamaClient()
+
+# REGION: Prompt Management Utilities
+def estimate_token_count(text: str) -> int:
+    """Estimate token count for a given text (1 token ≈ 4 chars, rough)."""
+    return len(text) // 4
+
+def truncate_prompt(text: str, max_tokens: int = 4096) -> str:
+    tokens = estimate_token_count(text)
+    if tokens > max_tokens:
+        # Truncate to last max_tokens*4 chars (most recent/relevant)
+        truncated = text[-(max_tokens*4):]
+        import logging
+        logging.warning(f"[Ollama] Prompt truncated from {tokens} to {max_tokens} tokens.")
+        return truncated
+    return text
+# END REGION

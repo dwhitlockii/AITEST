@@ -7,6 +7,7 @@ from .sensor_agent import SensorAgent
 from .analyzer_agent import AnalyzerAgent
 from .remediator_agent import RemediatorAgent
 from .communicator_agent import CommunicatorAgent
+
 # Import new agents
 from .security_agent import SecurityAgent
 from .network_agent import NetworkAgent
