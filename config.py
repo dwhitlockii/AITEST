@@ -81,7 +81,7 @@ class OllamaConfig:
     """Ollama local LLM configuration - for API key-free LLM communication."""
 
     url: str = "http://localhost:11434"
-    model: str = "mistral:latest"
+    model: str = "llama2:latest"
     timeout: int = 60  # Increased from 30 to 60 seconds for better reliability
     retry_attempts: int = 3
     retry_delay: int = 2

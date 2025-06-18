@@ -2021,7 +2021,8 @@ async def get_live_alerts(limit: int = 50):
     log_path = "debug_output/agent_system.log"
     alert_levels = ["WARNING", "ERROR", "CRITICAL"]
     alert_lines = []
-    log_pattern = re.compile(r"\[(.*?)\] (WARNING|ERROR|CRITICAL)\s+([\S]+): (.+)")
+    # Updated regex to match actual log format: "timestamp - AgentSystem - LEVEL - agent: message"
+    log_pattern = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - AgentSystem - (WARNING|ERROR|CRITICAL) - (.+): (.+)")
     try:
         with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()

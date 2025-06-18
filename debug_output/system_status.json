@@ -1,27 +1,33 @@
 {
-  "timestamp": "2025-06-17T22:38:01.709824",
+  "timestamp": "2025-06-18T03:40:25.480451",
   "system_overview": {
     "platform": "Windows",
-    "cpu_usage": 18.8,
-    "memory_usage": 78.6,
+    "cpu_usage": 0.0,
+    "memory_usage": 85.0,
     "disk_usage": {
-      "C:\\": 94.11222350188537
+      "C:\\": 92.41999442133275
     },
-    "uptime": 1750208491.351486,
+    "uptime": 1750231053.0080988,
     "total_agents": 1,
     "running_agents": 1
   },
   "agent_status": {
     "CommunicatorAgent": {
       "status": "running",
-      "health": "unknown",
-      "last_update": "2025-06-17T22:38:01.709824",
-      "uptime": 0.0,
-      "check_count": 0,
+      "health": "healthy",
+      "last_update": "2025-06-18T03:40:25.480451",
+      "uptime": 61.980331,
+      "check_count": 1,
       "error_count": 0
     }
   },
-  "recent_events": [],
+  "recent_events": [
+    {
+      "type": "message",
+      "timestamp": "2025-06-18T03:39:23.558728",
+      "description": "Message from SensorAgent: metric_data"
+    }
+  ],
   "health_indicators": {
     "cpu_health": "healthy",
     "memory_health": "healthy",
@@ -29,21 +35,21 @@
     "overall_health": "warning"
   },
   "performance_metrics": {
-    "cpu_percent": 12.5,
-    "memory_percent": 78.6,
+    "cpu_percent": 0.0,
+    "memory_percent": 85.0,
     "disk_io": {
-      "read_count": 2520012,
-      "write_count": 915249,
-      "read_bytes": 121132083712,
-      "write_bytes": 54289387008,
-      "read_time": 3487,
-      "write_time": 781
+      "read_count": 1158208,
+      "write_count": 301168,
+      "read_bytes": 28944252416,
+      "write_bytes": 10861910528,
+      "read_time": 737,
+      "write_time": 65
     },
     "network_io": {
-      "bytes_sent": 231701247,
-      "bytes_recv": 411447812,
-      "packets_sent": 215633,
-      "packets_recv": 449669,
+      "bytes_sent": 46759096,
+      "bytes_recv": 250791638,
+      "packets_sent": 71432,
+      "packets_recv": 136235,
       "errin": 0,
       "errout": 0,
       "dropin": 0,
